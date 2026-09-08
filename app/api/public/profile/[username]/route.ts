@@ -25,10 +25,10 @@ export async function GET(req: NextRequest, context: { params: Promise<{ usernam
   }
 
   const [{ data: media }, { data: reviews }] = await Promise.all([
-    admin.from("media").select("id,type,visibility,title,media_url,thumbnail_url,sort_order,created_at").eq("creator_id", profile.id).order("sort_order").order("created_at", { ascending: true }),
+    admin.from("media").select("*").eq("creator_id", profile.id).order("sort_order").order("created_at", { ascending: true }),
     admin.from("reviews").select("id,reviewer_name,rating,review_text,is_featured,created_at").eq("creator_id", profile.id).eq("is_published", true).order("is_featured", { ascending: false }).order("created_at", { ascending: false }),
   ]);
 
-  const safeMedia = (media || []).map(item => ({ ...item, media_url: item.visibility === "LOCKED" && !unlocked ? null : item.media_url, thumbnail_url: item.visibility === "LOCKED" && !unlocked ? null : item.thumbnail_url, locked: item.visibility === "LOCKED" && !unlocked }));
+  const safeMedia = (media || []).map(item => ({ ...item, likes_count: Number((item as { likes_count?: number }).likes_count || 0), media_url: item.visibility === "LOCKED" && !unlocked ? null : item.media_url, thumbnail_url: item.visibility === "LOCKED" && !unlocked ? null : item.thumbnail_url, locked: item.visibility === "LOCKED" && !unlocked }));
   return NextResponse.json({ profile: { id: profile.id, username: profile.username, display_name: profile.display_name, bio: profile.bio, avatar_url: profile.avatar_url, cover_url: profile.cover_url }, media: safeMedia, reviews: reviews || [], unlocked });
 }
