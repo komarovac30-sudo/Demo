@@ -1,33 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { serviceSupabase } from "@/lib/supabase-service";
-
-function decodeHeader(value: string | null) {
-  if (!value) return null;
-  try { return decodeURIComponent(value); } catch { return value; }
-}
-
-function detectDevice(userAgent: string) {
-  const ua = userAgent.toLowerCase();
-  const deviceType = /ipad|tablet/.test(ua) ? "Tablet" : /mobi|android|iphone/.test(ua) ? "Mobile" : "Desktop";
-  const browser = /edg\//.test(ua) ? "Edge" : /opr\//.test(ua) ? "Opera" : /chrome\//.test(ua) ? "Chrome" : /safari\//.test(ua) && !/chrome\//.test(ua) ? "Safari" : /firefox\//.test(ua) ? "Firefox" : "Other";
-  const os = /iphone|ipad|ios/.test(ua) ? "iOS" : /android/.test(ua) ? "Android" : /windows/.test(ua) ? "Windows" : /mac os|macintosh/.test(ua) ? "macOS" : /linux/.test(ua) ? "Linux" : "Other";
-  return { deviceType, browser, os };
-}
-
-function visitorContext(req: NextRequest) {
-  const userAgent = req.headers.get("user-agent") || "";
-  const device = detectDevice(userAgent);
-  return {
-    city: decodeHeader(req.headers.get("x-vercel-ip-city")),
-    country: decodeHeader(req.headers.get("x-vercel-ip-country")),
-    region: decodeHeader(req.headers.get("x-vercel-ip-country-region")),
-    location_source: "ip",
-    device_type: device.deviceType,
-    browser: device.browser,
-    os: device.os,
-    user_agent: userAgent,
-  };
-}
+import { getVisitorContext } from "@/lib/visitor-context";
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,7 +21,7 @@ export async function POST(req: NextRequest) {
       visitorId = user?.id || null;
     }
 
-    const context = visitorContext(req);
+    const context = await getVisitorContext(req);
     const metadata = { page: "public-profile", ...context, ...(body.metadata || {}) };
     const { error } = await admin.from("activity_events").insert({
       profile_id: profileId,

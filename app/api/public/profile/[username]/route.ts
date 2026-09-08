@@ -29,6 +29,23 @@ export async function GET(req: NextRequest, context: { params: Promise<{ usernam
     admin.from("reviews").select("id,reviewer_name,rating,review_text,is_featured,created_at").eq("creator_id", profile.id).eq("is_published", true).order("is_featured", { ascending: false }).order("created_at", { ascending: false }),
   ]);
 
-  const safeMedia = (media || []).map(item => ({ ...item, likes_count: Number((item as { likes_count?: number }).likes_count || 0), media_url: item.visibility === "LOCKED" && !unlocked ? null : item.media_url, thumbnail_url: item.visibility === "LOCKED" && !unlocked ? null : item.thumbnail_url, locked: item.visibility === "LOCKED" && !unlocked }));
+  const likedIds = new Set<string>();
+  if (viewerId && (media || []).length > 0) {
+    const { data: likes } = await admin
+      .from("media_likes")
+      .select("media_id")
+      .eq("visitor_id", viewerId)
+      .in("media_id", (media || []).map(item => item.id));
+    (likes || []).forEach(item => likedIds.add(item.media_id));
+  }
+
+  const safeMedia = (media || []).map(item => ({
+    ...item,
+    likes_count: Number((item as { likes_count?: number }).likes_count || 0),
+    liked_by_me: likedIds.has(item.id),
+    media_url: item.visibility === "LOCKED" && !unlocked ? null : item.media_url,
+    thumbnail_url: item.visibility === "LOCKED" && !unlocked ? null : item.thumbnail_url,
+    locked: item.visibility === "LOCKED" && !unlocked,
+  }));
   return NextResponse.json({ profile: { id: profile.id, username: profile.username, display_name: profile.display_name, bio: profile.bio, avatar_url: profile.avatar_url, cover_url: profile.cover_url }, media: safeMedia, reviews: reviews || [], unlocked });
 }
