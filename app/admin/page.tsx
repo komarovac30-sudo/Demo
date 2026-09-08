@@ -2,118 +2,26 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Activity, LogOut, Plus, ShieldCheck, Star, UserPlus, Users } from "lucide-react";
+import { Activity, ChevronRight, Eye, Heart, LogOut, MapPin, Plus, ShieldCheck, Sparkles, Star, Unlock, UserPlus, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase-browser";
 
-type Creator = { id: string; display_name: string; username: string; bio: string | null; is_active: boolean };
-type EventRow = { id: string; event_type: string; created_at: string; profile_id: string };
+type Creator={id:string;display_name:string;username:string;bio:string|null;is_active:boolean;avatar_url?:string|null};
+type Visitor={key:string;ip_address:string;city:string|null;country:string|null;device_type:string;browser:string;visits:number;media_views:number;likes:number;unlocks:number;last_seen:string;active_now:boolean;creators:string[]};
+type Analytics={totals:{unique_visitors:number;profile_views:number;media_views:number;unlocks:number;likes:number;active_today:number};visitors:Visitor[]};
 
-export default function AdminPage() {
-  const [ready, setReady] = useState(false);
-  const [authorized, setAuthorized] = useState(false);
-  const [creators, setCreators] = useState<Creator[]>([]);
-  const [events, setEvents] = useState<EventRow[]>([]);
-  const [message, setMessage] = useState("");
-
-  const load = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setReady(true); return; }
-    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-    if (profile?.role !== "SUPER_ADMIN") { setReady(true); return; }
-    setAuthorized(true);
-    const [{ data: creatorRows }, { data: eventRows }] = await Promise.all([
-      supabase.from("profiles").select("id,display_name,username,bio,is_active").eq("role", "CREATOR").order("created_at", { ascending: false }),
-      supabase.from("activity_events").select("id,event_type,created_at,profile_id").order("created_at", { ascending: false }).limit(20),
-    ]);
-    setCreators((creatorRows || []) as Creator[]);
-    setEvents((eventRows || []) as EventRow[]);
-    setReady(true);
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  async function createCreator(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault(); setMessage("");
-    const form = new FormData(e.currentTarget);
-    const { data: { session } } = await supabase.auth.getSession();
-    const res = await fetch("/api/admin/create-creator", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
-      body: JSON.stringify(Object.fromEntries(form.entries())),
-    });
-    const body = await res.json();
-    setMessage(res.ok ? "Creator account created." : (body.error || "Unable to create creator."));
-    if (res.ok) { e.currentTarget.reset(); await load(); }
-  }
-
-  async function addReview(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault(); setMessage("");
-    const form = new FormData(e.currentTarget);
-    const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from("reviews").insert({
-      creator_id: form.get("creator_id"), reviewer_name: form.get("reviewer_name"),
-      rating: Number(form.get("rating")), review_text: form.get("review_text"), created_by: user?.id,
-      is_published: true,
-    });
-    setMessage(error ? error.message : "Review added successfully.");
-    if (!error) e.currentTarget.reset();
-  }
-
-  async function logout() { await supabase.auth.signOut(); location.href = "/login"; }
-
-  if (!ready) return <div className="center-screen">Loading admin dashboard…</div>;
-  if (!authorized) return <div className="center-screen"><div><h2>Admin access required</h2><Link className="btn primary" href="/login">Go to login</Link></div></div>;
-
-  return (
-    <main className="dashboard-page">
-      <aside className="sidebar">
-        <Link href="/" className="brand">CreatorSpace<span>Demo</span></Link>
-        <nav><a href="#overview">Overview</a><a href="#creators">Creators</a><a href="#reviews">Reviews</a><a href="#activity">Activity</a></nav>
-        <button className="btn ghost wide" onClick={logout}><LogOut size={17}/> Log out</button>
-      </aside>
-      <section className="dashboard-main">
-        <div className="dashboard-header"><div><div className="eyebrow"><ShieldCheck size={15}/> Super Admin</div><h1>Platform overview</h1></div><Link className="btn secondary" href="/u/creator">Public profile</Link></div>
-        {message && <div className="alert success">{message}</div>}
-        <div id="overview" className="kpi-grid">
-          <div className="kpi"><Users/><strong>{creators.length}</strong><span>Creators</span></div>
-          <div className="kpi"><Activity/><strong>{events.length}</strong><span>Recent events</span></div>
-          <div className="kpi"><Star/><strong>5</strong><span>Review system</span></div>
-        </div>
-
-        <div className="dashboard-grid">
-          <section id="creators" className="panel">
-            <div className="panel-title"><div><h2>Creator accounts</h2><p>Create User B accounts from the dashboard.</p></div><UserPlus/></div>
-            <form className="compact-form" onSubmit={createCreator}>
-              <input name="display_name" placeholder="Display name" required />
-              <input name="username" placeholder="username" required />
-              <input name="email" type="email" placeholder="creator@email.com" required />
-              <input name="password" type="password" placeholder="Temporary password" minLength={8} required />
-              <button className="btn primary"><Plus size={16}/> Create creator</button>
-            </form>
-            <div className="list-stack">
-              {creators.map(c => <div className="list-row" key={c.id}><div><strong>{c.display_name}</strong><span>@{c.username}</span></div><span className={`pill ${c.is_active ? "success" : ""}`}>{c.is_active ? "Active" : "Disabled"}</span></div>)}
-            </div>
-          </section>
-
-          <section id="reviews" className="panel">
-            <div className="panel-title"><div><h2>Add a review</h2><p>Reviews are controlled by User A.</p></div><Star/></div>
-            <form className="form-stack" onSubmit={addReview}>
-              <label>Creator<select name="creator_id" required defaultValue=""><option value="" disabled>Select creator</option>{creators.map(c => <option key={c.id} value={c.id}>{c.display_name}</option>)}</select></label>
-              <label>Reviewer name<input name="reviewer_name" required placeholder="Alex M." /></label>
-              <label>Rating<select name="rating" defaultValue="5">{[5,4,3,2,1].map(n => <option key={n} value={n}>{n} stars</option>)}</select></label>
-              <label>Review<textarea name="review_text" required placeholder="Write a short demo review…" /></label>
-              <button className="btn primary">Publish review</button>
-            </form>
-          </section>
-        </div>
-
-        <section id="activity" className="panel">
-          <div className="panel-title"><div><h2>Recent activity</h2><p>Latest events across creator profiles.</p></div><Activity/></div>
-          <div className="activity-table">
-            {events.length === 0 ? <p className="muted">No activity yet.</p> : events.map(ev => <div className="activity-row" key={ev.id}><span className="activity-dot"/><strong>{ev.event_type.replaceAll("_", " ")}</strong><span>{new Date(ev.created_at).toLocaleString()}</span></div>)}
-          </div>
-        </section>
-      </section>
-    </main>
-  );
+export default function AdminPage(){
+ const[ready,setReady]=useState(false);const[authorized,setAuthorized]=useState(false);const[creators,setCreators]=useState<Creator[]>([]);const[analytics,setAnalytics]=useState<Analytics|null>(null);const[message,setMessage]=useState("");
+ const load=useCallback(async()=>{const{data:{user}}=await supabase.auth.getUser();if(!user){setReady(true);return;}const{data:profile}=await supabase.from("profiles").select("role").eq("id",user.id).single();if(profile?.role!=="SUPER_ADMIN"){setReady(true);return;}setAuthorized(true);const[{data:rows},{data:{session}}]=await Promise.all([supabase.from("profiles").select("id,display_name,username,bio,is_active,avatar_url").eq("role","CREATOR").order("created_at",{ascending:false}),supabase.auth.getSession()]);setCreators((rows||[])as Creator[]);if(session?.access_token){const res=await fetch("/api/analytics/visitors",{headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"});if(res.ok)setAnalytics(await res.json() as Analytics);}setReady(true);},[]);useEffect(()=>{load();},[load]);
+ async function createCreator(e:FormEvent<HTMLFormElement>){e.preventDefault();setMessage("");const form=new FormData(e.currentTarget);const{data:{session}}=await supabase.auth.getSession();const res=await fetch("/api/admin/create-creator",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${session?.access_token||""}`},body:JSON.stringify(Object.fromEntries(form.entries()))});const body=await res.json();setMessage(res.ok?"Creator account created.":(body.error||"Unable to create creator."));if(res.ok){e.currentTarget.reset();await load();}}
+ async function addReview(e:FormEvent<HTMLFormElement>){e.preventDefault();setMessage("");const form=new FormData(e.currentTarget);const{data:{user}}=await supabase.auth.getUser();const{error}=await supabase.from("reviews").insert({creator_id:form.get("creator_id"),reviewer_name:form.get("reviewer_name"),rating:Number(form.get("rating")),review_text:form.get("review_text"),created_by:user?.id,is_published:true});setMessage(error?error.message:"Review added successfully.");if(!error)e.currentTarget.reset();}
+ async function logout(){await supabase.auth.signOut();location.href="/login";}
+ if(!ready)return <div className="center-screen">Loading command center…</div>;if(!authorized)return <div className="center-screen"><div><h2>Admin access required</h2><Link className="btn primary" href="/login">Go to login</Link></div></div>;
+ return <main className="dashboard-page admin-dashboard"><aside className="sidebar luxury-sidebar"><Link href="/" className="brand">CreatorSpace<span>Demo</span></Link><div className="sidebar-role">Super Admin</div><nav><a className="active" href="#overview">Overview</a><a href="#creators">Creators</a><Link href="/admin/visitors">Visitors</Link><a href="#reviews">Reviews</a><a href="#activity">Analytics</a></nav><div className="sidebar-foot-note"><span className="live-dot"/> Platform intelligence live</div><button className="btn ghost wide" onClick={logout}><LogOut size={17}/> Log out</button></aside>
+ <section className="dashboard-main studio-main"><div id="overview" className="dashboard-header studio-header"><div><div className="eyebrow"><ShieldCheck size={15}/> Platform command center</div><h1>Everything, in one view.</h1><p className="header-subtitle">Creators, visitors and content signals across the demo platform.</p></div><Link className="btn secondary" href="/u/creator">Open public experience <Eye size={17}/></Link></div>{message&&<div className="alert success floating-alert">{message}</div>}
+ <div className="studio-kpis"><div className="metric-card hero-metric"><Users/><span>Creators</span><strong>{creators.length}</strong><small>{creators.filter(c=>c.is_active).length} active</small></div><div className="metric-card"><Activity/><span>Unique visitors</span><strong>{analytics?.totals.unique_visitors??0}</strong><small>{analytics?.totals.active_today??0} active in 24h</small></div><div className="metric-card"><Eye/><span>Profile views</span><strong>{analytics?.totals.profile_views??0}</strong><small>Across creators</small></div><div className="metric-card"><Heart/><span>Net likes</span><strong>{analytics?.totals.likes??0}</strong><small>Tracked engagement</small></div><div className="metric-card"><Unlock/><span>Unlocks</span><strong>{analytics?.totals.unlocks??0}</strong><small>Successful access</small></div></div>
+ <section id="activity" className="panel audience-preview admin-audience"><div className="panel-title"><div><h2>Visitor intelligence</h2><p>Consolidated by unique captured IP across the platform.</p></div><Link href="/admin/visitors" className="text-link">Open all visitors <ChevronRight size={15}/></Link></div>{!analytics?.visitors.length?<div className="empty-state">No visitor activity yet.</div>:<div className="dashboard-visitor-list">{analytics.visitors.slice(0,6).map(v=><Link href={`/admin/visitors/${v.key}`} className="dashboard-visitor-row admin-visitor-row" key={v.key}><span className={`visitor-status ${v.active_now?"online":""}`}/><div className="dash-visitor-identity"><strong>{v.ip_address}</strong><span><MapPin size={12}/>{v.city||"Location unavailable"}{v.country?`, ${v.country}`:""}</span></div><div className="dash-visitor-device"><span>{v.device_type}</span><small>{v.browser}</small></div><div className="dash-visitor-creator"><span>{v.creators.join(", ")||"Creator"}</span><small>creator activity</small></div><div className="dash-visitor-counts"><b>{v.visits}</b><small>visits</small></div><ChevronRight size={17}/></Link>)}</div>}</section>
+ <div className="dashboard-grid admin-editor-grid"><section id="creators" className="panel"><div className="panel-title"><div><h2>Creator management</h2><p>Create and review User B accounts.</p></div><UserPlus/></div><form className="compact-form" onSubmit={createCreator}><input name="display_name" placeholder="Display name" required/><input name="username" placeholder="username" required/><input name="email" type="email" placeholder="creator@email.com" required/><input name="password" type="password" placeholder="Temporary password" minLength={8} required/><button className="btn primary"><Plus size={16}/> Create creator</button></form><div className="creator-management-list">{creators.map(c=><div className="creator-management-row" key={c.id}><div className="creator-cell"><img src={c.avatar_url||"/demo/avatar.svg"} alt=""/><div><strong>{c.display_name}</strong><span>@{c.username}</span></div></div><span className={`pill ${c.is_active?"success":""}`}>{c.is_active?"Active":"Disabled"}</span><Link href={`/u/${c.username}`} className="icon-btn"><Eye size={16}/></Link></div>)}</div></section>
+ <section id="reviews" className="panel"><div className="panel-title"><div><h2>Publish a review</h2><p>Admin-controlled social proof.</p></div><Star/></div><form className="form-stack" onSubmit={addReview}><label>Creator<select name="creator_id" required defaultValue=""><option value="" disabled>Select creator</option>{creators.map(c=><option key={c.id} value={c.id}>{c.display_name}</option>)}</select></label><label>Reviewer name<input name="reviewer_name" required placeholder="Alex M."/></label><label>Rating<select name="rating" defaultValue="5">{[5,4,3,2,1].map(n=><option key={n} value={n}>{n} stars</option>)}</select></label><label>Review<textarea name="review_text" required placeholder="Write a short demo review…"/></label><button className="btn primary">Publish review</button></form></section></div>
+ <section className="admin-footer-callout"><Sparkles/><div><strong>Same visual system, different purpose.</strong><span>The public experience stays cinematic while admin surfaces prioritize clarity and intelligence.</span></div><Link className="btn ghost small" href="/admin/visitors">Explore visitor intelligence</Link></section>
+ </section></main>;
 }

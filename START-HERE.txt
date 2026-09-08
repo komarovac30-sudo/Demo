@@ -1,22 +1,26 @@
-CREATORSPACE DEMO — START HERE
+CREATORSPACE DEMO - START HERE
 
-Your current Supabase + Vercel setup is already compatible with this project.
+This is the complete V4 project package.
 
-1) Run supabase/rls-hardening.sql in Supabase SQL Editor (only if you have not already run the security patch).
-2) Extract this ZIP.
-3) Upload the CONTENTS of this folder to the root of GitHub repo: fill-boop/Demo
-4) Commit to main.
-5) Wait for Vercel deployment status = Ready.
-6) Run supabase/seed-demo.sql in Supabase SQL Editor to populate @creator with demo media/reviews.
-7) Visit /u/creator for the public profile.
-8) Visit /login for User A / User B dashboards.
+Recommended deployment:
+1. Extract this ZIP.
+2. Copy the CONTENTS of the Demo folder into your local GitHub repository folder (for example C:\Projects\Demo).
+3. Replace existing project files.
+4. Keep your private environment values in Vercel; no secrets are included here.
+5. In Supabase SQL Editor, confirm V3 likes SQL was already run.
+6. Optionally run supabase/update-v4-visitor-intelligence.sql for analytics indexes.
+7. In GitHub Desktop: review changes -> Commit to main -> Push origin.
+8. Vercel will auto-deploy.
 
-Required Vercel variables:
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-SUPABASE_SECRET_KEY
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-CLOUDINARY_API_KEY
-CLOUDINARY_API_SECRET
+MAIN TEST URLS
+Public creator: /u/creator
+Creator dashboard: /dashboard
+Creator visitors: /dashboard/visitors
+Admin dashboard: /admin
+Admin visitors: /admin/visitors
 
-Never upload your secret values to GitHub.
+VISITOR ANALYTICS RULE
+One unique captured IP = one row in the visitor list.
+Every underlying event remains stored separately for the detailed journey/timeline.
+
+See UPDATE-NOTES.txt for the full change list.

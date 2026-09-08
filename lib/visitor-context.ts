@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { NextRequest } from "next/server";
 
 export type VisitorContext = {
@@ -9,6 +10,8 @@ export type VisitorContext = {
   browser: string;
   os: string;
   user_agent: string;
+  ip_address: string | null;
+  visitor_key: string;
 };
 
 function decodeHeader(value: string | null) {
@@ -24,12 +27,27 @@ function detectDevice(userAgent: string) {
   return { deviceType, browser, os };
 }
 
-function requestIp(req: NextRequest) {
+function normalizeIp(raw: string) {
+  let ip = raw.trim();
+  if (ip.startsWith("[")) {
+    const closing = ip.indexOf("]");
+    if (closing > 0) ip = ip.slice(1, closing);
+  } else if (/^\d{1,3}(?:\.\d{1,3}){3}:\d+$/.test(ip)) {
+    ip = ip.replace(/:\d+$/, "");
+  }
+  return ip;
+}
+
+export function requestIp(req: NextRequest) {
   const raw = req.headers.get("x-vercel-forwarded-for") || req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "";
-  let ip = raw.split(",")[0]?.trim() || "";
-  if (/^\d{1,3}(?:\.\d{1,3}){3}:\d+$/.test(ip)) ip = ip.replace(/:\d+$/, "");
+  const ip = normalizeIp(raw.split(",")[0] || "");
   if (!ip || ip === "::1" || ip.startsWith("127.") || ip.startsWith("10.") || ip.startsWith("192.168.") || /^172\.(1[6-9]|2\d|3[01])\./.test(ip)) return null;
   return ip;
+}
+
+export function makeVisitorKey(ip: string | null, fallbackSeed: string) {
+  const seed = ip ? `ip:${ip}` : `fallback:${fallbackSeed}`;
+  return createHash("sha256").update(seed).digest("hex").slice(0, 24);
 }
 
 async function fallbackIpCity(ip: string | null) {
@@ -40,16 +58,12 @@ async function fallbackIpCity(ip: string | null) {
     const res = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`, {
       cache: "no-store",
       signal: controller.signal,
-      headers: { "Accept": "application/json" },
+      headers: { Accept: "application/json" },
     });
     if (!res.ok) return null;
     const data = await res.json() as { success?: boolean; city?: string; region?: string; country?: string };
     if (data.success === false) return null;
-    return {
-      city: data.city || null,
-      region: data.region || null,
-      country: data.country || null,
-    };
+    return { city: data.city || null, region: data.region || null, country: data.country || null };
   } catch {
     return null;
   } finally {
@@ -60,16 +74,15 @@ async function fallbackIpCity(ip: string | null) {
 export async function getVisitorContext(req: NextRequest): Promise<VisitorContext> {
   const userAgent = req.headers.get("user-agent") || "";
   const device = detectDevice(userAgent);
+  const ipAddress = requestIp(req);
 
   let city = decodeHeader(req.headers.get("x-vercel-ip-city"));
   let country = decodeHeader(req.headers.get("x-vercel-ip-country"));
   let region = decodeHeader(req.headers.get("x-vercel-ip-country-region"));
   let source: VisitorContext["location_source"] = city ? "vercel-ip" : "unavailable";
 
-  // Vercel normally provides city/country headers. If the city header is missing,
-  // use the visitor's forwarded public IP with an HTTPS IP-geolocation fallback.
   if (!city) {
-    const fallback = await fallbackIpCity(requestIp(req));
+    const fallback = await fallbackIpCity(ipAddress);
     if (fallback?.city) {
       city = fallback.city;
       region = fallback.region || region;
@@ -78,6 +91,7 @@ export async function getVisitorContext(req: NextRequest): Promise<VisitorContex
     }
   }
 
+  const fallbackSeed = [userAgent, city || "", region || "", country || ""].join("|");
   return {
     city,
     country,
@@ -87,5 +101,7 @@ export async function getVisitorContext(req: NextRequest): Promise<VisitorContex
     browser: device.browser,
     os: device.os,
     user_agent: userAgent,
+    ip_address: ipAddress,
+    visitor_key: makeVisitorKey(ipAddress, fallbackSeed),
   };
 }
