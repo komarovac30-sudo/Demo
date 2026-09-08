@@ -2,12 +2,12 @@
 
 import { ChangeEvent, FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { BarChart3, Eye, ImagePlus, LockKeyhole, LogOut, Play, Save, Upload } from "lucide-react";
+import { BarChart3, Eye, ImagePlus, LockKeyhole, LogOut, MapPin, MonitorSmartphone, Play, Save, Upload } from "lucide-react";
 import { supabase } from "@/lib/supabase-browser";
 
 type Profile = { id: string; username: string; display_name: string; bio: string | null; avatar_url: string | null; cover_url: string | null; role: string };
 type Media = { id: string; type: "PHOTO"|"VIDEO"; visibility: "PUBLIC"|"LOCKED"; title: string|null; media_url: string; created_at: string };
-type EventRow = { event_type: string; created_at: string };
+type EventRow = { event_type: string; created_at: string; metadata: { city?: string|null; country?: string|null; device_type?: string; browser?: string; os?: string } | null };
 
 export default function CreatorDashboard() {
   const [ready, setReady] = useState(false); const [authorized, setAuthorized] = useState(false);
@@ -22,7 +22,7 @@ export default function CreatorDashboard() {
     setAuthorized(true); setProfile(p as Profile);
     const [{ data: m }, { data: ev }] = await Promise.all([
       supabase.from("media").select("id,type,visibility,title,media_url,created_at").eq("creator_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("activity_events").select("event_type,created_at").eq("profile_id", user.id).order("created_at", { ascending: false }).limit(30),
+      supabase.from("activity_events").select("event_type,created_at,metadata").eq("profile_id", user.id).order("created_at", { ascending: false }).limit(30),
     ]);
     setMedia((m || []) as Media[]); setEvents((ev || []) as EventRow[]); setReady(true);
   }, []);
@@ -105,6 +105,19 @@ export default function CreatorDashboard() {
             </form>
           </section>
         </div>
+
+        <section className="panel">
+          <div className="panel-title"><div><h2>Recent visitor activity</h2><p>Approximate city and device information captured when visitors interact with your profile.</p></div><MapPin/></div>
+          {events.length === 0 ? <div className="empty-state">No visitor activity has been tracked yet.</div> : <div className="visitor-log-list">{events.slice(0, 15).map((event, index) => {
+            const meta = event.metadata || {};
+            return <article className="visitor-log-row" key={`${event.created_at}-${index}`}>
+              <span className="activity-dot"/>
+              <div className="visitor-log-main"><strong>{event.event_type.replaceAll("_", " ")}</strong><span><MapPin size={13}/>{meta.city || "Location unavailable"}{meta.country ? `, ${meta.country}` : ""}</span></div>
+              <div className="visitor-log-device"><MonitorSmartphone size={14}/><span>{meta.device_type || "Unknown device"}{meta.browser ? ` • ${meta.browser}` : ""}{meta.os ? ` • ${meta.os}` : ""}</span></div>
+              <time>{new Date(event.created_at).toLocaleString()}</time>
+            </article>;
+          })}</div>}
+        </section>
 
         <section id="content" className="panel">
           <div className="panel-title"><div><h2>Your content</h2><p>Public and locked posts.</p></div><Play/></div>
