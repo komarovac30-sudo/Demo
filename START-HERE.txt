@@ -1,0 +1,22 @@
+CREATORSPACE DEMO — START HERE
+
+Your current Supabase + Vercel setup is already compatible with this project.
+
+1) Run supabase/rls-hardening.sql in Supabase SQL Editor (only if you have not already run the security patch).
+2) Extract this ZIP.
+3) Upload the CONTENTS of this folder to the root of GitHub repo: fill-boop/Demo
+4) Commit to main.
+5) Wait for Vercel deployment status = Ready.
+6) Run supabase/seed-demo.sql in Supabase SQL Editor to populate @creator with demo media/reviews.
+7) Visit /u/creator for the public profile.
+8) Visit /login for User A / User B dashboards.
+
+Required Vercel variables:
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+SUPABASE_SECRET_KEY
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+CLOUDINARY_API_KEY
+CLOUDINARY_API_SECRET
+
+Never upload your secret values to GitHub.
