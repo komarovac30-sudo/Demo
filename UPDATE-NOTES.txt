@@ -1,0 +1,35 @@
+CREATORSPACE DEMO - VISITOR LOCATION + QUICK STATS UPDATE
+=========================================================
+
+WHAT CHANGED
+- Public profile quick stats now show:
+  * total media likes
+  * total photos
+  * total videos
+  * current visitor city with map-pin icon + green active indicator
+  * total reviews
+- Each post shows its stored like count.
+- Profile activity is now logged server-side with approximate visitor city,
+  country, device type, browser and OS.
+- Creator dashboard now contains a Recent visitor activity section.
+- Added vercel.json to explicitly declare the project as Next.js.
+
+DATABASE STEP - REQUIRED ON EXISTING DEMO
+1. Open Supabase > SQL Editor > New query.
+2. Open supabase/visitor-location-and-likes.sql from this package.
+3. Copy all SQL, paste it into Supabase, and Run it ONCE.
+4. You do NOT need to rerun the full schema.
+5. You also do NOT need to rerun seed-demo.sql unless you want to reset the
+   demo media/reviews. The migration gives the existing seeded demo items like counts.
+
+DEPLOY STEP
+- Upload/overwrite the updated files in GitHub main.
+- Vercel should auto-deploy.
+- Framework should remain Next.js and no Build/Output overrides are needed.
+
+LOCATION NOTE
+- The displayed city is the CURRENT VISITOR'S approximate city derived from
+  Vercel's request/IP geolocation headers.
+- It does not silently access GPS and therefore does not trigger a browser
+  location permission prompt.
+- VPNs/proxies/mobile networks can make IP-based city detection approximate.
