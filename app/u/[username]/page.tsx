@@ -20,9 +20,9 @@ type Review = {
   reviewer_avatar_url?: string | null; rating: number; review_text: string; is_featured: boolean; created_at?: string; source?: string;
 };
 type Profile = {
-  id: string; username: string; display_name: string; bio: string | null; headline: string | null; location_label: string | null;
+  id: string; username: string; display_name: string; bio: string | null; headline: string | null;
   avatar_url: string | null; cover_url: string | null; is_verified: boolean; public_phone: string | null; public_email: string | null;
-  exclusive_price: number; exclusive_currency: string;
+  exclusive_price: number; exclusive_currency: string; profile_likes_count?: number;
 };
 type Payload = { profile: Profile; media: Media[]; reviews: Review[]; unlocked: boolean };
 type VisitorContext = { city: string | null; country: string | null; region: string | null };
@@ -75,7 +75,7 @@ export default function PublicProfilePage() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
     if (!data?.profile.id) return;
-    track("PROFILE_VIEW").then(context => { if (context) setVisitorContext(context); });
+    track("PROFILE_VIEW").then(context => setVisitorContext(context || { city: null, country: null, region: null }));
     if (data.media.some(m => m.visibility === "LOCKED" && m.locked)) track("LOCKED_CONTENT_SEEN");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.profile.id]);
@@ -224,7 +224,7 @@ export default function PublicProfilePage() {
 
   const publicMedia = useMemo(() => data?.media.filter(m => m.visibility === "PUBLIC") || [], [data]);
   const exclusiveMedia = useMemo(() => data?.media.filter(m => m.visibility === "LOCKED") || [], [data]);
-  const totalLikes = useMemo(() => data?.media.reduce((sum, m) => sum + Number(m.likes_count || 0), 0) || 0, [data]);
+  const totalLikes = useMemo(() => Number(data?.profile.profile_likes_count ?? data?.media.reduce((sum, m) => sum + Number(m.likes_count || 0), 0) ?? 0), [data]);
   const photoCount = useMemo(() => data?.media.filter(m => m.type === "PHOTO").length || 0, [data]);
   const videoCount = useMemo(() => data?.media.filter(m => m.type === "VIDEO").length || 0, [data]);
   const averageRating = useMemo(() => data?.reviews.length ? data.reviews.reduce((sum, r) => sum + r.rating, 0) / data.reviews.length : 0, [data]);
@@ -248,7 +248,7 @@ export default function PublicProfilePage() {
             <div className="profile-name-row"><h1>{p.display_name}</h1>{p.is_verified && <span className="verified-badge" title="Demo verified profile"><BadgeCheck size={21}/></span>}</div>
             <span className="profile-handle">@{p.username}</span>
             <p className="profile-headline">{p.headline || "Independent profile • Private media journal"}</p>
-            {p.location_label && <span className="profile-location"><MapPin size={14}/>{p.location_label}</span>}
+            <span className="profile-location auto-location-v6"><MapPin size={14}/>{visitorContext?.city ? `${visitorContext.city}${visitorContext.country ? `, ${visitorContext.country}` : ""}` : visitorContext ? "Location unavailable" : "Detecting your area…"}<i className="mini-live-dot"/></span>
           </div>
           <div className="profile-contact-actions">
             {p.public_phone && <a className="contact-action call" href={`tel:${p.public_phone.replace(/[^+\d]/g, "")}`} onClick={() => track("CONTACT_PHONE_CLICK")}><Phone size={17}/><span>Call</span></a>}
@@ -304,7 +304,7 @@ export default function PublicProfilePage() {
       {activeTab === "about" && <section className="profile-section-v5 about-section-v5">
         <div className="about-story-v5"><span className="section-kicker">ABOUT</span><h2>A little about {p.display_name.split(" ")[0]}</h2><p>{p.bio || "This profile owner has not added an About section yet."}</p></div>
         <div className="about-side-v5">
-          <article><MapPin/><div><span>Based in</span><strong>{p.location_label || "Location shared privately"}</strong></div></article>
+          <article><MapPin/><div><span>Your approximate location</span><strong>{visitorContext?.city ? `${visitorContext.city}${visitorContext.country ? `, ${visitorContext.country}` : ""}` : visitorContext ? "Location unavailable" : "Detecting from your network…"}</strong></div></article>
           <article><BadgeCheck/><div><span>Profile status</span><strong>{p.is_verified ? "Verified demo profile" : "Active profile"}</strong></div></article>
           <article><LockKeyhole/><div><span>Private media</span><strong>{exclusiveMedia.length} exclusive items</strong></div></article>
           {(p.public_phone || p.public_email) && <article><Phone/><div><span>Direct contact</span><strong>{p.public_phone || p.public_email}</strong></div></article>}

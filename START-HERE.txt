@@ -1,44 +1,40 @@
-VELOURA ES PROFILE PLATFORM — V5 FULL REWORK
+VELOURA ES PROFILE PLATFORM — V6 STUDIO POLISH
 
-THIS ZIP IS THE COMPLETE SOURCE REWORK FOR THE CURRENT DEMO PROJECT.
+THIS ZIP IS THE COMPLETE SOURCE PROJECT BASED ON V5 + THE LATEST CREATOR-STUDIO FIXES.
 
-DEPLOY TO YOUR EXISTING PROJECT
+IF YOUR CURRENT DATABASE ALREADY HAS V5
 1. Extract the ZIP.
-2. Copy the CONTENTS of the extracted project into your local GitHub Demo repository.
-3. Replace existing app/components/lib/public/supabase files.
-4. Keep your existing Vercel environment variables. No secret values are included.
-5. BEFORE testing V5 features, run this once in Supabase SQL Editor:
+2. Copy the CONTENTS into your local GitHub Demo repository and replace existing files.
+3. Keep your existing Vercel environment variables.
+4. In Supabase SQL Editor run ONCE:
+       supabase/update-v6-studio-polish.sql
+5. GitHub Desktop -> review changes -> Commit to main -> Push origin.
+6. Vercel auto-deploys.
+
+IF YOU NEVER RAN V5
+Run these in order:
        supabase/update-v5-full-rework.sql
-6. For a populated fictional client demo, optionally run:
-       supabase/seed-demo-v5.sql
-7. GitHub Desktop -> review changes -> Commit to main -> Push origin.
-8. Vercel auto-deploys.
+       supabase/update-v6-studio-polish.sql
+Optional demo data:
+       supabase/seed-demo-v6.sql
+
+LATEST V6 CHECKS
+- /dashboard: cover upload button is clearly visible.
+- Select a content file: preview + file information appears immediately.
+- Publish: progress changes while Cloudinary uploads, then Saving, then Published.
+- New item appears in Media Library without needing a manual page refresh.
+- Location Label field is removed from ES profile editing.
+- /u/creator uses the viewer's IP/network city instead of an ES-entered location.
+- Profile Likes can be edited from the Home metric.
+- Every media item's like count can be edited from Media Library.
 
 MAIN ROUTES
-Public ES profile:        /u/creator
-Private ES/Admin login:   /login
-ES Studio:                /dashboard
-ES Visitor Intelligence:  /dashboard/visitors
-Admin Home:               /admin
-Admin ES Management:      /admin/creators
-Admin Review Management:  /admin/reviews
-Admin Visitor Intelligence:/admin/visitors
+Public profile:             /u/creator
+ES Studio:                  /dashboard
+ES Visitor Intelligence:    /dashboard/visitors
+Admin Home:                 /admin
+Admin ES Management:        /admin/creators
+Admin Review Management:    /admin/reviews
+Admin Visitor Intelligence: /admin/visitors
 
-PUBLIC-FIRST RULE
-A normal Visitor does NOT see a login wall when opening /u/creator.
-Authentication appears only after a gated action such as:
-- Write a review
-- Unlock private/exclusive digital content
-
-IMPORTANT DEMO RULES
-- All seeded people, reviews, contact details, artwork, visitor IPs and checkout data are fictional.
-- The checkout is DEMO_CHECKOUT; no real payment is processed.
-- The demo payment is only for digital exclusive-content access.
-- No offline/in-person service booking/payment is implemented.
-
-VISITOR INTELLIGENCE
-One captured unique IP/visitor key is consolidated into one top-level visitor row.
-Every event remains stored for drill-down, sessions and timeline analysis.
-The raw IP is not placed in the detail-page URL.
-
-See README.md and UPDATE-NOTES.txt for details.
+See README.md, UPDATE-NOTES.txt and QA-CHECKLIST.md.

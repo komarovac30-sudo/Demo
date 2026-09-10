@@ -1,6 +1,6 @@
--- VELOURA Demo — Full V5 reference schema for a FRESH Supabase project.
+-- VELOURA Demo — Full V6 reference schema for a FRESH Supabase project.
 -- Do NOT run this file on an existing project. Existing projects should run
--- supabase/update-v5-full-rework.sql after their prior V3/V4 updates.
+-- supabase/update-v6-studio-polish.sql after the V5 migration.
 
 create extension if not exists pgcrypto;
 
@@ -25,6 +25,7 @@ create table public.profiles (
   is_verified boolean not null default false,
   exclusive_price numeric(10,2) not null default 24.99 check (exclusive_price >= 0),
   exclusive_currency text not null default 'USD',
+  profile_likes_count integer not null default 0 check (profile_likes_count >= 0),
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -215,5 +216,5 @@ for select to authenticated using(public.is_admin());
 
 -- Hardening: authenticated users can update only public presentation fields on their own profile.
 revoke update on table public.profiles from authenticated;
-grant update(username,display_name,headline,bio,location_label,avatar_url,cover_url,public_phone,public_email,phone_visible,email_visible,exclusive_price,exclusive_currency,updated_at)
+grant update(username,display_name,headline,bio,avatar_url,cover_url,public_phone,public_email,phone_visible,email_visible,exclusive_price,exclusive_currency,updated_at)
   on public.profiles to authenticated;

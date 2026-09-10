@@ -8,7 +8,48 @@ type SignResponse = {
   apiKey: string;
 };
 
-export async function uploadToCloudinary(file: File, accessToken: string, purpose: UploadPurpose) {
+type CloudinaryUploadResult = {
+  secure_url: string;
+  resource_type: "image" | "video";
+  public_id: string;
+};
+
+type UploadOptions = {
+  onProgress?: (percent: number) => void;
+};
+
+function uploadWithProgress(url: string, form: FormData, onProgress?: (percent: number) => void) {
+  return new Promise<CloudinaryUploadResult>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.responseType = "json";
+
+    xhr.upload.onprogress = event => {
+      if (!event.lengthComputable || !onProgress) return;
+      onProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+    };
+
+    xhr.onerror = () => reject(new Error("Network error while uploading. Please try again."));
+    xhr.onabort = () => reject(new Error("Upload cancelled."));
+    xhr.onload = () => {
+      const body = xhr.response || {};
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(new Error(body?.error?.message || "Cloudinary upload failed."));
+        return;
+      }
+      onProgress?.(100);
+      resolve(body as CloudinaryUploadResult);
+    };
+    xhr.send(form);
+  });
+}
+
+export async function uploadToCloudinary(
+  file: File,
+  accessToken: string,
+  purpose: UploadPurpose,
+  options: UploadOptions = {},
+) {
   const signRes = await fetch("/api/cloudinary/sign", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
@@ -24,11 +65,9 @@ export async function uploadToCloudinary(file: File, accessToken: string, purpos
   uploadForm.append("signature", sign.signature);
   uploadForm.append("folder", sign.folder);
 
-  const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${sign.cloudName}/auto/upload`, {
-    method: "POST",
-    body: uploadForm,
-  });
-  const cloud = await cloudRes.json();
-  if (!cloudRes.ok) throw new Error(cloud.error?.message || "Cloudinary upload failed.");
-  return cloud as { secure_url: string; resource_type: "image" | "video"; public_id: string };
+  return uploadWithProgress(
+    `https://api.cloudinary.com/v1_1/${sign.cloudName}/auto/upload`,
+    uploadForm,
+    options.onProgress,
+  );
 }

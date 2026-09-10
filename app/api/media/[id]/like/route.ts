@@ -52,6 +52,16 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
   }
 
   await admin.from("media").update({ likes_count: count }).eq("id", mediaId);
+
+  // Keep the profile headline like counter moving with real visitor engagement.
+  // Creators can still set a demo starting value from ES Studio.
+  const delta = liked ? 1 : -1;
+  const { data: creatorProfile } = await admin.from("profiles").select("profile_likes_count").eq("id", media.creator_id).maybeSingle();
+  if (creatorProfile) {
+    const nextProfileLikes = Math.max(0, Number(creatorProfile.profile_likes_count || 0) + delta);
+    await admin.from("profiles").update({ profile_likes_count: nextProfileLikes, updated_at: new Date().toISOString() }).eq("id", media.creator_id);
+  }
+
   await admin.from("activity_events").insert({
     profile_id: media.creator_id,
     visitor_id: visitorId,

@@ -13,7 +13,6 @@ export async function POST(req: NextRequest) {
     const username = String(body.username || "").trim().toLowerCase();
     const displayName = String(body.display_name || "").trim().slice(0, 80);
     const headline = String(body.headline || "").trim().slice(0, 120) || null;
-    const locationLabel = String(body.location_label || "").trim().slice(0, 120) || null;
 
     if (!email || password.length < 8 || !displayName || !/^[a-z0-9_.]{3,40}$/.test(username)) {
       return NextResponse.json({ error: "Name, email, an 8+ character password, and a 3–40 character username using letters, numbers, dot or underscore are required." }, { status: 400 });
@@ -37,7 +36,7 @@ export async function POST(req: NextRequest) {
       username,
       display_name: displayName,
       headline,
-      location_label: locationLabel,
+      location_label: null,
       is_verified: false,
     }).eq("id", data.user.id);
 

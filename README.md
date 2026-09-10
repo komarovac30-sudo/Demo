@@ -1,4 +1,4 @@
-# VELOURA — ES Profile Platform Demo (V5 Full Rework)
+# VELOURA — ES Profile Platform Demo (V6 Studio Polish)
 
 VELOURA is a fictional client-preview build of the ES Profile Platform described in the SRS. It keeps the existing **Next.js + Supabase + Cloudinary + Vercel** architecture, but reworks the product into three clear experiences:
 
@@ -8,7 +8,7 @@ VELOURA is a fictional client-preview build of the ES Profile Platform described
 
 All names, phone numbers, email addresses, reviews, media artwork, IP addresses and payment records included in the seed are **fictional demo data**. The demo does not copy a real ES identity or review.
 
-## Main V5 routes
+## Main routes
 
 ```text
 /                         Demo landing page
@@ -24,11 +24,11 @@ All names, phone numbers, email addresses, reviews, media artwork, IP addresses 
 /admin/visitors/[key]     Admin visitor detail
 ```
 
-## V5 highlights
+## V6 highlights
 
 ### Public profile
 - Cinematic Luxury Dark redesign.
-- Cover + avatar + verified presentation + headline + city label.
+- Cover + avatar + verified presentation + headline + automatic current-viewer city/country from IP/network signals.
 - Click-to-call / click-to-email contact actions when the ES exposes those fields.
 - Public photos/videos viewable while logged out.
 - Anonymous public-media likes supported with a stable visitor key.
@@ -40,12 +40,12 @@ All names, phone numbers, email addresses, reviews, media artwork, IP addresses 
 - Demo checkout simulates a confirmed **digital-content** purchase; no real money is charged.
 
 ### ES Studio
-- Small Home summary: unique visitors, profile views, likes, unlocks and demo revenue.
-- Local-device avatar and cover upload through Cloudinary.
-- Edit display name, username, headline, location, About, public phone/email and visibility toggles.
+- Small Home summary: unique visitors, profile views, editable profile likes, unlocks and demo revenue.
+- Local-device avatar and cover upload through Cloudinary with visible upload progress and an explicit cover control.
+- Edit display name, username, headline, About, public phone/email and visibility toggles. Location is no longer manually entered.
 - Configure demo exclusive-library price/currency.
-- Post new photo/video and choose PUBLIC or LOCKED.
-- Recent media management.
+- Post new photo/video with immediate local preview, file information, real upload progress, visible save/publish state and PUBLIC/LOCKED selection.
+- Recent media management with editable per-media like counts.
 - Detailed analytics moved under Advanced / Visitor Intelligence.
 
 ### Admin Command Center
@@ -88,10 +88,16 @@ If your current Demo database already has the previous schema/V3 likes/V4 analyt
 supabase/update-v5-full-rework.sql
 ```
 
-3. For a populated client preview, optionally run:
+3. Then run once:
 
 ```text
-supabase/seed-demo-v5.sql
+supabase/update-v6-studio-polish.sql
+```
+
+4. For a populated client preview, optionally run:
+
+```text
+supabase/seed-demo-v6.sql
 ```
 
 The seed updates the existing `@creator` account to the fictional **Sienna Vale** demo profile and adds synthetic media/reviews/analytics. It does not create login passwords.
@@ -104,7 +110,7 @@ For a completely fresh Supabase project, use `supabase/full-schema.sql` instead 
 2. Copy the **contents** into your local `Demo` GitHub repository folder.
 3. Replace the existing application files.
 4. Do not overwrite or commit private `.env` values.
-5. Run the V5 SQL migration in Supabase before using the new pages.
+5. Run the V5 migration if needed, then run `supabase/update-v6-studio-polish.sql` before using the new V6 controls.
 6. In GitHub Desktop: review changes → Commit to `main` → Push origin.
 7. Vercel should deploy automatically.
 8. Test `/u/creator`, `/dashboard`, `/dashboard/visitors`, `/admin`, `/admin/creators`, `/admin/reviews`, `/admin/visitors`.
@@ -135,6 +141,15 @@ Production validation:
 npm run build
 ```
 
+## Latest V6 creator-studio behavior
+
+- Public location is the current viewer's approximate IP/network location, not a creator-entered city.
+- Creator cover upload is always visible and shows progress.
+- New content shows a local preview before upload and live upload/save status.
+- New content appears in Media Library immediately after publish succeeds.
+- Creator can edit the public profile like number and each media item's displayed like number.
+- Real visitor image/video likes remain functional and move the profile-level counter as well.
+
 ## Demo identity
 
 Public demo URL after deployment:
@@ -147,7 +162,7 @@ The seeded presentation is intentionally fictional:
 
 ```text
 Sienna Vale
-Miami, Florida
+Location: detected automatically for each viewer
 +1 (305) 555-0148
 hello@siennavale.demo
 ```
