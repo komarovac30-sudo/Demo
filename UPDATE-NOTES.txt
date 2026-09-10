@@ -1,35 +1,73 @@
-CreatorSpace Demo - V4 Cinematic + Visitor Intelligence
-Date: 2026-09-08
+VELOURA — V5 FULL REWORK
+Date: 2026-09-11
 
-WHAT CHANGED
-1. Public creator profile redesigned to Cinematic Luxury Dark.
-2. Media is now presented in a premium 2-column visual grid.
-3. Exclusive content has a dedicated blurred/private collection experience.
-4. Media lightbox, live likes, visitor-location chip, Reviews and About sections retained/refined.
-5. Creator dashboard redesigned with KPI cards and unique visitor preview.
-6. Super Admin dashboard redesigned with cross-creator visitor intelligence.
-7. New Creator route: /dashboard/visitors
-8. New Creator detail route: /dashboard/visitors/[visitor-key]
-9. New Admin route: /admin/visitors
-10. New Admin detail route: /admin/visitors/[visitor-key]
-11. One captured unique IP is shown as one visitor entry. Underlying activity events are NOT deleted or merged.
-12. Visitor detail shows sessions, complete event timeline, device/location summary and media interest.
-13. New events save ip_address + hashed visitor_key inside activity_events.metadata.
-14. Raw IP is never used in the URL; the detail URL uses the hashed visitor key.
+DESIGN DIRECTION
+Cinematic Luxury Dark on the public ES profile.
+Clean Studio for User B / ES.
+Clean Command Center for User A / Admin.
+Detailed analytics are intentionally one level deeper under Visitor Intelligence.
+
+PUBLIC PROFILE
+- No initial Visitor login option/wall in the public browsing flow.
+- Cinematic cover, avatar, verified state, headline and location.
+- Public phone/email contact actions controlled by ES visibility toggles.
+- Public media browsing while logged out.
+- Anonymous likes for public media via stable visitor key.
+- Dedicated private/exclusive content presentation.
+- Auth requested only after Write Review or Unlock.
+- Visitor review: first name, last name, optional local avatar, 1–5 stars, review text.
+- Visitor reviews default to Pending moderation.
+- Private-library checkout is simulated and clearly marked as a demo.
+
+ES / CREATOR
+- Cleaner Home with a small set of KPIs.
+- Local-device avatar and cover photo upload.
+- Edit headline, city label, About, public phone/email and visibility.
+- Edit exclusive library price/currency.
+- Keep Post New Content with PUBLIC / LOCKED visibility.
+- Media management on Home.
+- Advanced Visitor Intelligence moved out of default Home.
+
+ADMIN
+- Home separately shows User Type B Total ES and User Type 3 Total Visitor Accounts.
+- Active/disabled ES status.
+- Dedicated /admin/creators page.
+- Dedicated /admin/reviews page.
+- Admin review form has first/last name, optional avatar with default fallback, stars and review text.
+- Review moderation: Pending / Published / Rejected + Delete.
+- Platform-wide Visitor Intelligence remains available.
+
+VISITOR INTELLIGENCE
+- One unique captured IP/visitor key = one top-level row.
+- Underlying events are preserved.
+- Detail route uses a hashed visitor key, not the raw IP.
+- Detail includes location, device, browser, OS, first/last seen, visits, media views, likes, unlocks, 30-minute sessions, event journey and content interest.
+- UI states clearly that shared/changing IPs mean the row is an analytics identity, not proof of one physical person.
+
+DATA / API
+- New ES presentation/contact fields on profiles.
+- Rich review fields and moderation/source state.
+- Visitor review API.
+- Anonymous/signed-in like handling.
+- Payment-ready ledger plus DEMO_CHECKOUT digital-entitlement endpoint.
+- Local Cloudinary avatar/cover/reviewer-avatar uploads.
+- Admin ES status/verification API.
+- Admin review moderation API.
 
 DATABASE
-- V3 likes must already be applied: supabase/update-v3-location-likes.sql
-- V4 does not require a destructive schema change.
-- Optional performance indexes: supabase/update-v4-visitor-intelligence.sql
+Existing database: run once
+  supabase/update-v5-full-rework.sql
 
-IMPORTANT
-Historical activity created before V4 may not contain IP data. Those rows use a legacy fallback identity and can display as "Legacy / unavailable IP". New production activity will include the captured IP when Vercel/forwarding headers make it available.
+Optional fictional demo population:
+  supabase/seed-demo-v5.sql
 
-DEPLOY
-1. Run V3 SQL first if it was never applied.
-2. Optional: run update-v4-visitor-intelligence.sql.
-3. Replace your local Demo project contents with this package.
-4. Do NOT overwrite your local .env files with secrets from elsewhere.
-5. Commit and push to main.
-6. Let Vercel deploy automatically.
-7. Test /u/creator, /dashboard, /dashboard/visitors, /admin and /admin/visitors.
+Fresh database only:
+  supabase/full-schema.sql
+
+REAL-SITE RESEARCH POLICY
+The UI/content model was informed by public patterns found on US directory/review platforms and creator subscription profiles: media-forward profiles, direct contact actions, verification/reputation cues, moderated reviews, mobile-first profiles and gated premium content. The application does NOT copy a real ES name, photo, phone, email or review. Seed content is fictional.
+
+PRODUCTION LIMITS
+- DEMO_CHECKOUT is not a live payment integration.
+- Payment provider, age/identity verification, legal wording, content policy and production compliance remain launch-time decisions.
+- No offline/in-person service booking/payment flow is included.

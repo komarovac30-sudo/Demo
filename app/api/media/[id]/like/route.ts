@@ -5,35 +5,60 @@ import { getVisitorContext } from "@/lib/visitor-context";
 export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id: mediaId } = await context.params;
   const admin = serviceSupabase();
+
+  let visitorId: string | null = null;
+  let visitorRole: string | null = null;
   const token = req.headers.get("authorization")?.replace("Bearer ", "") || "";
-  if (!token) return NextResponse.json({ error: "Sign in to like this post." }, { status: 401 });
+  if (token) {
+    const { data: { user } } = await admin.auth.getUser(token);
+    if (user) {
+      visitorId = user.id;
+      const { data: profile } = await admin.from("profiles").select("role").eq("id", user.id).maybeSingle();
+      visitorRole = profile?.role || null;
+    }
+  }
 
-  const { data: { user }, error: authError } = await admin.auth.getUser(token);
-  if (authError || !user) return NextResponse.json({ error: "Your session is no longer valid." }, { status: 401 });
+  const { data: media } = await admin.from("media").select("id,creator_id,visibility,likes_count").eq("id", mediaId).maybeSingle();
+  if (!media) return NextResponse.json({ error: "Media not found." }, { status: 404 });
 
-  const { data: result, error } = await admin.rpc("toggle_media_like", {
-    p_media_id: mediaId,
-    p_visitor_id: user.id,
+  if (media.visibility === "LOCKED") {
+    let allowed = visitorId === media.creator_id || visitorRole === "SUPER_ADMIN";
+    if (visitorId && !allowed) {
+      const { data: unlock } = await admin.from("profile_unlocks").select("id").eq("visitor_id", visitorId).eq("creator_id", media.creator_id).maybeSingle();
+      allowed = Boolean(unlock);
+    }
+    if (!allowed) return NextResponse.json({ error: "Unlock this collection before liking it." }, { status: 403 });
+  }
+
+  const visitorContext = await getVisitorContext(req);
+  const visitorKey = visitorContext.visitor_key;
+
+  let existingQuery = admin.from("media_likes").select("id").eq("media_id", mediaId);
+  if (visitorId) existingQuery = existingQuery.or(`visitor_id.eq.${visitorId},visitor_key.eq.${visitorKey}`);
+  else existingQuery = existingQuery.eq("visitor_key", visitorKey);
+  const { data: existing } = await existingQuery.limit(1).maybeSingle();
+
+  let liked = false;
+  let count = Number(media.likes_count || 0);
+  if (existing) {
+    await admin.from("media_likes").delete().eq("id", existing.id);
+    count = Math.max(0, count - 1);
+    liked = false;
+  } else {
+    const { error } = await admin.from("media_likes").insert({ media_id: mediaId, visitor_id: visitorId, visitor_key: visitorKey });
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    count += 1;
+    liked = true;
+  }
+
+  await admin.from("media").update({ likes_count: count }).eq("id", mediaId);
+  await admin.from("activity_events").insert({
+    profile_id: media.creator_id,
+    visitor_id: visitorId,
+    media_id: mediaId,
+    event_type: liked ? "MEDIA_LIKE" : "MEDIA_UNLIKE",
+    metadata: { page: "public-profile", ...visitorContext },
   });
-  if (error) {
-    const status = /locked/i.test(error.message) ? 403 : 400;
-    return NextResponse.json({ error: error.message }, { status });
-  }
 
-  const row = Array.isArray(result) ? result[0] : result;
-  if (!row) return NextResponse.json({ error: "Unable to update like." }, { status: 500 });
-
-  const { data: media } = await admin.from("media").select("creator_id").eq("id", mediaId).maybeSingle();
-  if (media?.creator_id) {
-    const visitorContext = await getVisitorContext(req);
-    await admin.from("activity_events").insert({
-      profile_id: media.creator_id,
-      visitor_id: user.id,
-      media_id: mediaId,
-      event_type: row.liked ? "MEDIA_LIKE" : "MEDIA_UNLIKE",
-      metadata: { page: "public-profile", ...visitorContext },
-    });
-  }
-
-  return NextResponse.json({ liked: Boolean(row.liked), likes_count: Number(row.likes_count || 0) });
+  return NextResponse.json({ liked, likes_count: count });
 }

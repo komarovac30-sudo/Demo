@@ -1,45 +1,4 @@
 import Link from "next/link";
-import { ArrowRight, BarChart3, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
-import { TopNav } from "@/components/TopNav";
+import { ArrowRight, BadgeCheck, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
 
-export default function HomePage() {
-  return (
-    <main>
-      <TopNav />
-      <section className="hero shell">
-        <div className="hero-copy">
-          <div className="eyebrow"><Sparkles size={16} /> Client preview environment</div>
-          <h1>A polished creator profile demo with controlled content access.</h1>
-          <p>
-            Super Admin creates profile owners, creators publish media, visitors browse public content and unlock restricted posts with a demo account.
-          </p>
-          <div className="hero-actions">
-            <Link className="btn primary" href="/u/creator">View creator profile <ArrowRight size={18} /></Link>
-            <Link className="btn secondary" href="/login">Open dashboard</Link>
-          </div>
-        </div>
-        <div className="hero-card glass-card">
-          <div className="hero-card-top">
-            <div>
-              <span className="muted">Demo creator</span>
-              <h3>@creator</h3>
-            </div>
-            <span className="pill success">Active</span>
-          </div>
-          <div className="mini-cover" />
-          <div className="mini-grid">
-            <div className="mini-stat"><strong>1.8K</strong><span>Views</span></div>
-            <div className="mini-stat"><strong>312</strong><span>Unlocks</span></div>
-            <div className="mini-stat"><strong>4.9</strong><span>Rating</span></div>
-          </div>
-        </div>
-      </section>
-
-      <section className="shell feature-grid">
-        <article className="feature-card"><ShieldCheck /><h3>Role based</h3><p>Separate Super Admin, Creator and Visitor experiences.</p></article>
-        <article className="feature-card"><LockKeyhole /><h3>Public + locked media</h3><p>Visitors see previews and unlock a creator profile with a demo-site account.</p></article>
-        <article className="feature-card"><BarChart3 /><h3>Trackable events</h3><p>Profile views, locked-content views, unlock attempts and successful access are recorded.</p></article>
-      </section>
-    </main>
-  );
-}
+export default function HomePage(){return <main className="landing-v5"><header className="landing-nav-v5"><Link href="/" className="veloura-brand"><span>V</span>VELOURA</Link><Link href="/login" className="btn ghost small">ES / Admin login</Link></header><section className="landing-hero-v5"><div><span className="workspace-kicker"><Sparkles size={14}/> CLIENT PREVIEW</span><h1>A premium public profile built around trust, privacy and private digital content.</h1><p>Visitors arrive from a shared profile link and browse without a login wall. Authentication appears only when they submit a review or unlock private digital content.</p><div className="landing-actions-v5"><Link className="btn premium-cta" href="/u/creator">Open Sienna’s demo profile <ArrowRight size={17}/></Link><Link className="btn secondary" href="/login">Open private workspace</Link></div><div className="landing-trust-v5"><span><BadgeCheck/>Profile-led experience</span><span><ShieldCheck/>Moderated reviews</span><span><LockKeyhole/>Creator-specific private access</span></div></div><div className="landing-preview-v5"><div className="preview-cover-v5"/><div className="preview-profile-v5"><img src="/demo/avatar-v5.svg" alt=""/><div><strong>Sienna Vale</strong><span>@creator • Miami, Florida</span></div><BadgeCheck/></div><div className="preview-stats-v5"><span><b>4.8</b> rating</span><span><b>8</b> posts</span><span><b>4</b> private</span></div></div></section><footer className="landing-footer-v5">Fictional client-demo data only • 18+ preview environment</footer></main>}

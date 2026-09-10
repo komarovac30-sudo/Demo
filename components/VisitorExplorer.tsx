@@ -2,129 +2,33 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Activity, ChevronRight, Eye, Heart, MapPin, MonitorSmartphone, RefreshCw, Search, Unlock, Users } from "lucide-react";
+import { Activity, ChevronRight, Eye, Heart, LogOut, MapPin, MonitorSmartphone, RefreshCw, Search, ShieldCheck, Unlock, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase-browser";
 
 type Visitor = {
-  key: string;
-  ip_address: string;
-  city: string | null;
-  country: string | null;
-  device_type: string;
-  browser: string;
-  os: string;
-  first_seen: string;
-  last_seen: string;
-  events: number;
-  visits: number;
-  media_views: number;
-  likes: number;
-  unlocks: number;
-  active_now: boolean;
-  creators: string[];
+  key:string; ip_address:string; city:string|null; country:string|null; region?:string|null; device_type:string; browser:string; os:string;
+  first_seen:string; last_seen:string; events:number; visits:number; media_views:number; likes:number; unlocks:number; active_now:boolean; creators:string[];
 };
+type Payload={totals:{unique_visitors:number;profile_views:number;media_views:number;unlocks:number;likes:number;active_today:number};visitors:Visitor[]};
 
-type Payload = {
-  totals: { unique_visitors: number; profile_views: number; media_views: number; unlocks: number; likes: number; active_today: number };
-  visitors: Visitor[];
-};
+function relativeTime(value:string){const s=Math.max(0,Math.floor((Date.now()-new Date(value).getTime())/1000));if(s<60)return"Just now";if(s<3600)return`${Math.floor(s/60)}m ago`;if(s<86400)return`${Math.floor(s/3600)}h ago`;if(s<604800)return`${Math.floor(s/86400)}d ago`;return new Date(value).toLocaleDateString();}
 
-function relativeTime(value: string) {
-  const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
-  if (seconds < 60) return "Just now";
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-  return new Date(value).toLocaleDateString();
-}
-
-export default function VisitorExplorer({ mode }: { mode: "creator" | "admin" }) {
-  const [data, setData] = useState<Payload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | "active" | "unlocked" | "liked">("all");
-
-  const load = useCallback(async () => {
-    setLoading(true); setError("");
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) { setError("Sign in required."); setLoading(false); return; }
-    const res = await fetch("/api/analytics/visitors", { headers: { Authorization: `Bearer ${session.access_token}` }, cache: "no-store" });
-    const body = await res.json();
-    if (!res.ok) { setError(body.error || "Unable to load visitors."); setLoading(false); return; }
-    setData(body as Payload); setLoading(false);
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const visitors = useMemo(() => {
-    const value = query.trim().toLowerCase();
-    return (data?.visitors || []).filter(visitor => {
-      if (filter === "active" && !visitor.active_now) return false;
-      if (filter === "unlocked" && visitor.unlocks <= 0) return false;
-      if (filter === "liked" && visitor.likes <= 0) return false;
-      if (!value) return true;
-      return [visitor.ip_address, visitor.city, visitor.country, visitor.device_type, visitor.browser, visitor.os, ...visitor.creators]
-        .filter(Boolean).join(" ").toLowerCase().includes(value);
-    });
-  }, [data, query, filter]);
-
-  const backHref = mode === "admin" ? "/admin" : "/dashboard";
-  const basePath = mode === "admin" ? "/admin/visitors" : "/dashboard/visitors";
-
-  return (
-    <main className="dashboard-page intelligence-page">
-      <aside className="sidebar luxury-sidebar">
-        <Link href="/" className="brand">CreatorSpace<span>Demo</span></Link>
-        <div className="sidebar-role">{mode === "admin" ? "Super Admin" : "Creator Studio"}</div>
-        <nav>
-          <Link href={backHref}>Overview</Link>
-          {mode === "admin" ? <Link href="/admin#creators">Creators</Link> : <Link href="/dashboard#content">Media</Link>}
-          <Link className="active" href={basePath}>Visitors</Link>
-          <Link href={`${backHref}#analytics`}>Analytics</Link>
-          <Link href={`${backHref}#reviews`}>Reviews</Link>
-        </nav>
-        <div className="sidebar-foot-note"><span className="live-dot"/> Visitor intelligence is live</div>
-      </aside>
-
-      <section className="dashboard-main intelligence-main">
-        <div className="dashboard-header intelligence-header">
-          <div><div className="eyebrow"><Activity size={15}/> Visitor intelligence</div><h1>Know your audience.</h1><p className="header-subtitle">Each unique captured IP appears once. Open any visitor to see their complete journey.</p></div>
-          <button className="btn ghost" onClick={load} disabled={loading}><RefreshCw size={16} className={loading ? "spin" : ""}/> Refresh</button>
-        </div>
-
-        {error && <div className="alert error">{error}</div>}
-        <div className="intelligence-kpis">
-          <div className="metric-card"><Users/><span>Unique visitors</span><strong>{data?.totals.unique_visitors ?? "—"}</strong><small>{data?.totals.active_today ?? 0} active in 24h</small></div>
-          <div className="metric-card"><Eye/><span>Profile views</span><strong>{data?.totals.profile_views ?? "—"}</strong><small>All tracked visits</small></div>
-          <div className="metric-card"><Activity/><span>Media views</span><strong>{data?.totals.media_views ?? "—"}</strong><small>Photos + video activity</small></div>
-          <div className="metric-card"><Heart/><span>Net likes</span><strong>{data?.totals.likes ?? "—"}</strong><small>Current engagement signal</small></div>
-          <div className="metric-card"><Unlock/><span>Unlocks</span><strong>{data?.totals.unlocks ?? "—"}</strong><small>Successful access</small></div>
-        </div>
-
-        <section className="panel visitor-panel">
-          <div className="visitor-toolbar">
-            <div className="search-box"><Search size={17}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search IP, city, device or creator…"/></div>
-            <div className="filter-pills">
-              {([['all','All visitors'],['active','Active now'],['unlocked','Unlocked'],['liked','Liked content']] as const).map(([value, label]) => <button key={value} onClick={() => setFilter(value)} className={filter === value ? "active" : ""}>{label}</button>)}
-            </div>
-          </div>
-
-          {loading ? <div className="visitor-loading"><span className="skeleton-line"/><span className="skeleton-line"/><span className="skeleton-line"/></div> : visitors.length === 0 ? <div className="empty-state">No visitors match this view yet.</div> : <div className="unique-visitor-list">
-            {visitors.map(visitor => <Link className="unique-visitor-card" href={`${basePath}/${visitor.key}`} key={visitor.key}>
-              <div className="visitor-identity">
-                <span className={`visitor-status ${visitor.active_now ? "online" : ""}`}/>
-                <div><strong className="ip-text">{visitor.ip_address}</strong><span><MapPin size={13}/>{visitor.city || "Location unavailable"}{visitor.country ? `, ${visitor.country}` : ""}</span></div>
-              </div>
-              {mode === "admin" && <div className="visitor-creator"><small>Creator</small><strong>{visitor.creators.join(", ") || "—"}</strong></div>}
-              <div className="visitor-device"><MonitorSmartphone size={15}/><div><strong>{visitor.device_type}</strong><span>{visitor.browser} • {visitor.os}</span></div></div>
-              <div className="visitor-engagement"><span><b>{visitor.visits}</b> visits</span><span><b>{visitor.media_views}</b> media</span><span><b>{Math.max(visitor.likes, 0)}</b> likes</span><span><b>{visitor.unlocks}</b> unlocks</span></div>
-              <div className="visitor-last"><small>Last seen</small><strong>{relativeTime(visitor.last_seen)}</strong><span>First {new Date(visitor.first_seen).toLocaleDateString()}</span></div>
-              <ChevronRight className="visitor-arrow" size={20}/>
-            </Link>)}
-          </div>}
-        </section>
+export default function VisitorExplorer({mode}:{mode:"creator"|"admin"}){
+  const[data,setData]=useState<Payload|null>(null);const[loading,setLoading]=useState(true);const[error,setError]=useState("");const[query,setQuery]=useState("");const[filter,setFilter]=useState<"all"|"active"|"unlocked"|"liked">("all");
+  const load=useCallback(async()=>{setLoading(true);setError("");const{data:{session}}=await supabase.auth.getSession();if(!session?.access_token){setError("Sign in required.");setLoading(false);return;}const res=await fetch("/api/analytics/visitors",{headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"});const body=await res.json();if(!res.ok)setError(body.error||"Unable to load Visitor Intelligence.");else setData(body as Payload);setLoading(false);},[]);useEffect(()=>{load();},[load]);
+  const visitors=useMemo(()=>{const value=query.trim().toLowerCase();return(data?.visitors||[]).filter(v=>{if(filter==="active"&&!v.active_now)return false;if(filter==="unlocked"&&v.unlocks<=0)return false;if(filter==="liked"&&v.likes<=0)return false;if(!value)return true;return[v.ip_address,v.city,v.country,v.region,v.device_type,v.browser,v.os,...v.creators].filter(Boolean).join(" ").toLowerCase().includes(value);});},[data,query,filter]);
+  const backHref=mode==="admin"?"/admin":"/dashboard";const basePath=mode==="admin"?"/admin/visitors":"/dashboard/visitors";
+  async function logout(){await supabase.auth.signOut();location.href="/login";}
+  return <main className="dashboard-page-v5 admin-v5">
+    <aside className="dashboard-sidebar-v5"><Link href="/" className="veloura-brand"><span>V</span>VELOURA</Link><div className="workspace-label">{mode==="admin"?"Admin":"ES Studio"}</div><nav><Link href={backHref}>Home</Link>{mode==="admin"?<><Link href="/admin/creators">ES profiles</Link><Link href="/admin/reviews">Reviews</Link></>:<><Link href="/dashboard#profile">My profile</Link><Link href="/dashboard#library">Media library</Link></>}<Link className="active" href={basePath}>Advanced / Visitors</Link></nav><div className="sidebar-system-v5"><span className="status-dot-v5"/>Live visitor signals</div><button className="sidebar-logout" onClick={logout}><LogOut size={17}/> Log out</button></aside>
+    <section className="dashboard-content-v5 intelligence-content-v5">
+      <header className="workspace-header-v5"><div><span className="workspace-kicker"><Activity size={14}/> ADVANCED • VISITOR INTELLIGENCE</span><h1>Visitor Intelligence</h1><p>One top-level entry per captured unique IP/visitor key, while every underlying event remains available in the drill-down.</p></div><button className="btn secondary" onClick={load} disabled={loading}><RefreshCw size={16} className={loading?"spin":""}/> Refresh</button></header>
+      <div className="ip-caveat-v5"><ShieldCheck size={17}/><div><strong>IP-based grouping is an analytics identity, not a guaranteed person identity.</strong><span>Shared networks can place multiple people behind one IP, and a returning visitor can also receive a new IP.</span></div></div>
+      {error&&<div className="alert error">{error}</div>}
+      <section className="compact-metrics-v5 intelligence-metrics-v5"><article className="metric-v5 primary"><Users/><div><span>Unique visitors</span><strong>{data?.totals.unique_visitors??0}</strong><small>{data?.totals.active_today??0} active in 24h</small></div></article><article className="metric-v5"><Eye/><div><span>Profile views</span><strong>{data?.totals.profile_views??0}</strong><small>Tracked visits</small></div></article><article className="metric-v5"><Activity/><div><span>Media activity</span><strong>{data?.totals.media_views??0}</strong><small>Photo + video views</small></div></article><article className="metric-v5"><Unlock/><div><span>Unlocks</span><strong>{data?.totals.unlocks??0}</strong><small>Successful private access</small></div></article></section>
+      <section className="workspace-panel-v5 visitor-intelligence-panel-v5"><div className="visitor-toolbar-v5"><div className="admin-search-v5 wide"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={mode==="admin"?"Search IP, city, device or ES…":"Search IP, city or device…"}/></div><div className="filter-pills-v5">{([['all','All'],['active','Active now'],['unlocked','Unlocked'],['liked','Liked']]as const).map(([value,label])=><button className={filter===value?"active":""} key={value} onClick={()=>setFilter(value)}>{label}</button>)}</div></div>
+      {loading?<div className="visitor-loading-v5"><span/><span/><span/></div>:visitors.length===0?<div className="empty-card-v5">No visitors match this view yet.</div>:<div className="visitor-table-v5"><div className="visitor-table-head-v5"><span>Visitor</span>{mode==="admin"&&<span>ES profile</span>}<span>Device</span><span>Engagement</span><span>Last seen</span><span/></div>{visitors.map(v=><Link href={`${basePath}/${v.key}`} className="visitor-row-v5" key={v.key}><div className="visitor-id-v5"><span className={`status-dot-v5 ${v.active_now?"active":""}`}/><div><strong>{v.ip_address}</strong><span><MapPin size={12}/>{v.city||"Location unavailable"}{v.country?`, ${v.country}`:""}</span></div></div>{mode==="admin"&&<div className="visitor-creator-v5"><strong>{v.creators.join(", ")||"—"}</strong><span>Creator activity</span></div>}<div className="visitor-device-v5"><MonitorSmartphone size={16}/><div><strong>{v.device_type}</strong><span>{v.browser} • {v.os}</span></div></div><div className="visitor-engage-v5"><span><b>{v.visits}</b> visits</span><span><b>{v.media_views}</b> media</span><span><b>{Math.max(v.likes,0)}</b> likes</span><span><b>{v.unlocks}</b> unlocks</span></div><div className="visitor-seen-v5"><strong>{relativeTime(v.last_seen)}</strong><span>First {new Date(v.first_seen).toLocaleDateString()}</span></div><ChevronRight size={19}/></Link>)}</div>}
       </section>
-    </main>
-  );
+    </section>
+  </main>;
 }

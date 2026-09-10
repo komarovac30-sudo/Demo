@@ -1,26 +1,44 @@
-CREATORSPACE DEMO - START HERE
+VELOURA ES PROFILE PLATFORM — V5 FULL REWORK
 
-This is the complete V4 project package.
+THIS ZIP IS THE COMPLETE SOURCE REWORK FOR THE CURRENT DEMO PROJECT.
 
-Recommended deployment:
-1. Extract this ZIP.
-2. Copy the CONTENTS of the Demo folder into your local GitHub repository folder (for example C:\Projects\Demo).
-3. Replace existing project files.
-4. Keep your private environment values in Vercel; no secrets are included here.
-5. In Supabase SQL Editor, confirm V3 likes SQL was already run.
-6. Optionally run supabase/update-v4-visitor-intelligence.sql for analytics indexes.
-7. In GitHub Desktop: review changes -> Commit to main -> Push origin.
-8. Vercel will auto-deploy.
+DEPLOY TO YOUR EXISTING PROJECT
+1. Extract the ZIP.
+2. Copy the CONTENTS of the extracted project into your local GitHub Demo repository.
+3. Replace existing app/components/lib/public/supabase files.
+4. Keep your existing Vercel environment variables. No secret values are included.
+5. BEFORE testing V5 features, run this once in Supabase SQL Editor:
+       supabase/update-v5-full-rework.sql
+6. For a populated fictional client demo, optionally run:
+       supabase/seed-demo-v5.sql
+7. GitHub Desktop -> review changes -> Commit to main -> Push origin.
+8. Vercel auto-deploys.
 
-MAIN TEST URLS
-Public creator: /u/creator
-Creator dashboard: /dashboard
-Creator visitors: /dashboard/visitors
-Admin dashboard: /admin
-Admin visitors: /admin/visitors
+MAIN ROUTES
+Public ES profile:        /u/creator
+Private ES/Admin login:   /login
+ES Studio:                /dashboard
+ES Visitor Intelligence:  /dashboard/visitors
+Admin Home:               /admin
+Admin ES Management:      /admin/creators
+Admin Review Management:  /admin/reviews
+Admin Visitor Intelligence:/admin/visitors
 
-VISITOR ANALYTICS RULE
-One unique captured IP = one row in the visitor list.
-Every underlying event remains stored separately for the detailed journey/timeline.
+PUBLIC-FIRST RULE
+A normal Visitor does NOT see a login wall when opening /u/creator.
+Authentication appears only after a gated action such as:
+- Write a review
+- Unlock private/exclusive digital content
 
-See UPDATE-NOTES.txt for the full change list.
+IMPORTANT DEMO RULES
+- All seeded people, reviews, contact details, artwork, visitor IPs and checkout data are fictional.
+- The checkout is DEMO_CHECKOUT; no real payment is processed.
+- The demo payment is only for digital exclusive-content access.
+- No offline/in-person service booking/payment is implemented.
+
+VISITOR INTELLIGENCE
+One captured unique IP/visitor key is consolidated into one top-level visitor row.
+Every event remains stored for drill-down, sessions and timeline analysis.
+The raw IP is not placed in the detail-page URL.
+
+See README.md and UPDATE-NOTES.txt for details.
