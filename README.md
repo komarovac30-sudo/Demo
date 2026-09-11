@@ -189,3 +189,18 @@ The `.demo` email domain and North American 555 number are placeholders and are 
 ## V7 database note
 
 If V6 is already deployed, only run `supabase/update-v7-review-workflow.sql` once before deploying the V7 code.
+
+---
+
+## V8 — Experience Polish
+
+V8 adds skeleton loading, more premium personal-profile wording, a stronger Gallery / Private Collection / Client Reviews hierarchy, and an optional 20-review fictional demo seed.
+
+If V7 is already installed, **no database migration is required**. To refresh the demo content, run:
+
+```sql
+-- Supabase SQL Editor
+-- file: supabase/seed-demo-v8.sql
+```
+
+The V8 seed is intentionally synthetic. It does not copy real providers, real contact details, or real third-party review text. See `UX-RESEARCH-V8.md` for the public UX patterns used as inspiration.

@@ -1,30 +1,40 @@
-VELOURA ES PROFILE PLATFORM — V7 REVIEW WORKFLOW
+VELOURA V8 — START HERE
 
-THIS ZIP IS THE COMPLETE SOURCE PROJECT BASED ON V6 + THE REVIEW WORKFLOW FIXES.
+If your database already has V7 installed:
 
-IF YOUR DATABASE IS ALREADY ON V6
-1. Extract this ZIP and replace your local Demo project files.
-2. Keep your existing Vercel environment variables.
-3. In Supabase SQL Editor run ONCE:
-       supabase/update-v7-review-workflow.sql
-4. Commit + Push with GitHub Desktop.
-5. Let Vercel deploy.
+A) OPTIONAL DEMO DATA REFRESH
+   Supabase -> SQL Editor -> run:
+   supabase/seed-demo-v8.sql
 
-IF YOU NEVER RAN V5/V6
-Run in order:
-       supabase/update-v5-full-rework.sql
-       supabase/update-v6-studio-polish.sql
-       supabase/update-v7-review-workflow.sql
-Optional fictional demo data:
-       supabase/seed-demo-v6.sql
+   This adds the polished fictional Sienna Vale demo and 20 original fictional verified reviews.
+   No V8 schema migration is required.
 
-V7 REVIEW CHECK
-- Admin manual review save no longer shows the null/reset error.
-- Creator can submit a review from /dashboard.
-- Creator-submitted review stays PENDING.
-- Admin sees it in /admin/reviews.
-- Admin clicks Verify.
-- Review becomes PUBLISHED/VERIFIED.
-- /u/creator shows the review with the text "Verified review".
+B) DEPLOY
+   1. Extract this ZIP.
+   2. Copy/replace all files in your local Demo repository.
+   3. Review changes in GitHub Desktop.
+   4. Commit to main.
+   5. Push origin.
+   6. Wait for Vercel auto-deploy.
 
-See README.md, UPDATE-NOTES.txt and QA-CHECKLIST.md.
+C) VERIFY
+   /u/creator
+   /dashboard
+   /dashboard/visitors
+   /admin
+   /admin/creators
+   /admin/reviews
+   /admin/visitors
+
+KEY V8 CHECKS
+- Skeleton loading appears instead of a blank/loader-only page.
+- Public profile uses Gallery / Client Reviews / About Me language.
+- Hero shows Discreet / Refined / Private tags.
+- Profile total likes are labeled Admirers.
+- Private Collection language appears consistently.
+- 20 demo reviews appear after running seed-demo-v8.sql.
+- Reviews display "Verified Review".
+- Creator/Admin review verification flow from V7 still works.
+
+IMPORTANT
+The seeded profile/reviews are fictional demo content. Do not present them as real third-party reviews.

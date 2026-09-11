@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-browser";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
+import { PublicProfileSkeleton } from "@/components/Skeletons";
 
 type Media = {
   id: string; type: "PHOTO" | "VIDEO"; visibility: "PUBLIC" | "LOCKED"; title: string | null;
@@ -46,6 +47,7 @@ export default function PublicProfilePage() {
   const [loading, setLoading] = useState(true);
   const [visitorContext, setVisitorContext] = useState<VisitorContext | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("media");
+  const [reviewLimit, setReviewLimit] = useState(6);
   const [selectedMedia, setSelectedMedia] = useState<Media | null>(null);
   const [notice, setNotice] = useState("");
   const [liking, setLiking] = useState<Set<string>>(new Set());
@@ -229,14 +231,14 @@ export default function PublicProfilePage() {
   const videoCount = useMemo(() => data?.media.filter(m => m.type === "VIDEO").length || 0, [data]);
   const averageRating = useMemo(() => data?.reviews.length ? data.reviews.reduce((sum, r) => sum + r.rating, 0) / data.reviews.length : 0, [data]);
 
-  if (loading) return <div className="center-screen public-loading"><span className="loader-orb"/><p>Opening profile…</p></div>;
+  if (loading) return <PublicProfileSkeleton/>;
   if (!data) return <div className="center-screen"><div className="friendly-error"><h2>Profile unavailable</h2><p>This profile may be inactive or the link may be incorrect.</p><Link href="/" className="btn primary">Back home</Link></div></div>;
   const p = data.profile;
 
   return <main className="public-profile-page">
     <header className="public-topbar">
       <Link href="/" className="veloura-brand"><span>V</span>VELOURA</Link>
-      <div className="public-top-actions"><span className="adult-demo-badge">18+ DEMO</span><button className="round-icon" onClick={shareProfile} aria-label="Share profile"><Share2 size={18}/></button></div>
+      <div className="public-top-actions"><span className="adult-demo-badge">18+</span><button className="round-icon" onClick={shareProfile} aria-label="Share profile"><Share2 size={18}/></button></div>
     </header>
 
     <div className="public-profile-shell">
@@ -245,43 +247,44 @@ export default function PublicProfilePage() {
         <div className="profile-identity-v5">
           <div className="profile-avatar-v5"><img src={p.avatar_url || "/demo/avatar-v5.svg"} alt={p.display_name}/><span className="online-ring"/></div>
           <div className="profile-main-copy">
-            <div className="profile-name-row"><h1>{p.display_name}</h1>{p.is_verified && <span className="verified-badge" title="Demo verified profile"><BadgeCheck size={21}/></span>}</div>
+            <div className="profile-name-row"><h1>{p.display_name}</h1>{p.is_verified && <span className="verified-badge" title="Verified profile"><BadgeCheck size={21}/></span>}</div>
             <span className="profile-handle">@{p.username}</span>
-            <p className="profile-headline">{p.headline || "Independent profile • Private media journal"}</p>
+            <p className="profile-headline">{p.headline || "Independent companion • Private gallery • Discreet connection"}</p>
+            <div className="profile-mood-tags-v8"><span>Discreet</span><span>Refined</span><span>Private</span></div>
             <span className="profile-location auto-location-v6"><MapPin size={14}/>{visitorContext?.city ? `${visitorContext.city}${visitorContext.country ? `, ${visitorContext.country}` : ""}` : visitorContext ? "Location unavailable" : "Detecting your area…"}<i className="mini-live-dot"/></span>
           </div>
           <div className="profile-contact-actions">
-            {p.public_phone && <a className="contact-action call" href={`tel:${p.public_phone.replace(/[^+\d]/g, "")}`} onClick={() => track("CONTACT_PHONE_CLICK")}><Phone size={17}/><span>Call</span></a>}
-            {p.public_email && <a className="contact-action" href={`mailto:${p.public_email}`} onClick={() => track("CONTACT_EMAIL_CLICK")}><Mail size={17}/><span>Email</span></a>}
+            {p.public_phone && <a className="contact-action call" href={`tel:${p.public_phone.replace(/[^+\d]/g, "")}`} onClick={() => track("CONTACT_PHONE_CLICK")}><Phone size={17}/><span>Direct call</span></a>}
+            {p.public_email && <a className="contact-action" href={`mailto:${p.public_email}`} onClick={() => track("CONTACT_EMAIL_CLICK")}><Mail size={17}/><span>Private email</span></a>}
             <button className="contact-action" onClick={shareProfile}><Share2 size={17}/><span>Share</span></button>
           </div>
         </div>
         <div className="public-stat-strip">
-          <span><Heart size={16}/><b>{totalLikes}</b><em>likes</em></span>
+          <span><Heart size={16}/><b>{totalLikes}</b><em>admirers</em></span>
           <span><Images size={16}/><b>{photoCount}</b><em>photos</em></span>
           <span><Video size={16}/><b>{videoCount}</b><em>videos</em></span>
           {visitorContext?.city && <span className="visitor-location-stat" title="Your approximate location based on network/IP"><MapPin size={16}/><b>{visitorContext.city}</b><em>your location •</em><i className="mini-live-dot"/></span>}
           <span><Star size={16}/><b>{averageRating ? averageRating.toFixed(1) : "New"}</b><em>{data.reviews.length} reviews</em></span>
-          <span className="trust-stat"><ShieldCheck size={16}/><b>Private</b><em>direct profile</em></span>
+          <span className="trust-stat"><ShieldCheck size={16}/><b>Discreet</b><em>private profile</em></span>
         </div>
       </section>
 
       {notice && <div className="profile-toast" onClick={() => setNotice("")}>{notice}<X size={14}/></div>}
 
       <nav className="profile-tabs-v5">
-        {(["media", "reviews", "about"] as Tab[]).map(tab => <button key={tab} className={activeTab === tab ? "active" : ""} onClick={() => setActiveTab(tab)}>{tab === "media" ? "Media" : tab === "reviews" ? `Reviews ${data.reviews.length}` : "About"}</button>)}
+        {(["media", "reviews", "about"] as Tab[]).map(tab => <button key={tab} className={activeTab === tab ? "active" : ""} onClick={() => setActiveTab(tab)}>{tab === "media" ? "Gallery" : tab === "reviews" ? `Client Reviews ${data.reviews.length}` : "About Me"}</button>)}
       </nav>
 
       {activeTab === "media" && <section className="profile-section-v5">
-        <div className="section-title-row"><div><span className="section-kicker">PUBLIC JOURNAL</span><h2>Latest moments</h2><p>Photos and short previews shared publicly.</p></div></div>
+        <div className="section-title-row"><div><span className="section-kicker">PUBLIC GALLERY</span><h2>A glimpse into my world.</h2><p>Selected photos and short previews shared openly.</p></div></div>
         {publicMedia.length ? <div className="public-media-grid-v5">{publicMedia.map((item, index) => <article key={item.id} className={`media-tile-v5 ${index === 0 ? "hero-tile" : ""}`} onClick={() => openMedia(item)}>
           {item.type === "VIDEO" ? <div className="video-tile"><video src={item.media_url || undefined} poster={item.thumbnail_url || undefined} muted playsInline/><span className="play-float"><Play size={22} fill="currentColor"/></span></div> : <img src={item.media_url || "/demo/media-01.svg"} alt={item.title || "Public media"}/>} 
           <div className="media-tile-overlay"><div><span>{item.type === "VIDEO" ? "VIDEO" : "PHOTO"}</span><strong>{item.title || "Untitled"}</strong></div><button className={`tile-like ${item.liked_by_me ? "liked" : ""}`} disabled={liking.has(item.id)} onClick={e => { e.stopPropagation(); toggleLike(item); }}><Heart size={16} fill={item.liked_by_me ? "currentColor" : "none"}/>{Number(item.likes_count || 0)}</button></div>
-        </article>)}</div> : <div className="empty-card-v5">No public media yet.</div>}
+        </article>)}</div> : <div className="empty-card-v5">The public gallery is being curated. Check back soon.</div>}
 
         <section className={`exclusive-showcase-v5 ${data.unlocked ? "unlocked" : ""}`}>
-          <div className="exclusive-copy-v5"><span className="section-kicker"><LockKeyhole size={13}/> PRIVATE COLLECTION</span><h2>{data.unlocked ? "Your private gallery is open" : "Unlock the private collection"}</h2><p>{data.unlocked ? "This account has access to the full private photo and video collection." : "One demo purchase unlocks this profile’s current private library. No real charge is made in this client-preview build."}</p>
-            {!data.unlocked && <button className="btn premium-cta" onClick={() => startGate("unlock")}><Unlock size={18}/> Unlock for {currency(p.exclusive_price, p.exclusive_currency)}</button>}
+          <div className="exclusive-copy-v5"><span className="section-kicker"><LockKeyhole size={13}/> PRIVATE COLLECTION</span><h2>{data.unlocked ? "Your private collection is open" : "A little more personal."}</h2><p>{data.unlocked ? "Your access is active. Enjoy the full private photo and video collection." : "Unlock the current private collection for this profile. Access is tied only to this creator."}</p>
+            {!data.unlocked && <button className="btn premium-cta" onClick={() => startGate("unlock")}><Unlock size={18}/> Unlock Private Gallery • {currency(p.exclusive_price, p.exclusive_currency)}</button>}
             {data.unlocked && <span className="unlocked-label"><ShieldCheck size={16}/> Access active</span>}
           </div>
           <div className="exclusive-grid-v5">{exclusiveMedia.slice(0, 4).map((item, index) => <article key={item.id} className={`exclusive-tile ${item.locked ? "locked" : ""}`} onClick={() => openMedia(item)}>
@@ -293,25 +296,25 @@ export default function PublicProfilePage() {
       </section>}
 
       {activeTab === "reviews" && <section className="profile-section-v5 reviews-section-v5">
-        <div className="review-summary-v5"><div className="review-score"><strong>{averageRating ? averageRating.toFixed(1) : "—"}</strong><div><span className="stars-line">{"★".repeat(Math.round(averageRating || 0))}{"☆".repeat(5 - Math.round(averageRating || 0))}</span><p>{data.reviews.length} published reviews</p></div></div><button className="btn secondary" onClick={() => startGate("review")}><MessageSquareText size={17}/> Write a review</button></div>
-        <div className="trust-note-v5"><ShieldCheck size={18}/><div><strong>Reviews are moderated before publication.</strong><span>Visitors can read reviews without an account. Sign-in appears only when a visitor chooses to submit one.</span></div></div>
-        {data.reviews.length ? <div className="review-grid-v5">{data.reviews.map(review => <article key={review.id} className={`review-card-v5 ${review.is_featured ? "featured" : ""}`}>
-          <div className="review-head-v5"><img src={review.reviewer_avatar_url || "/demo/reviewers/default-reviewer.svg"} alt=""/><div><strong>{reviewerDisplay(review)}</strong><span>Verified review</span></div><span className="review-stars">{"★".repeat(review.rating)}</span></div>
+        <div className="review-summary-v5"><div className="review-score"><strong>{averageRating ? averageRating.toFixed(1) : "—"}</strong><div><span className="stars-line">{"★".repeat(Math.round(averageRating || 0))}{"☆".repeat(5 - Math.round(averageRating || 0))}</span><p>Based on {data.reviews.length} verified client reviews</p></div></div><button className="btn secondary" onClick={() => startGate("review")}><MessageSquareText size={17}/> Share your experience</button></div>
+        <div className="trust-note-v5"><ShieldCheck size={18}/><div><strong>Trust comes first.</strong><span>Every review is moderated before it appears publicly. Browsing reviews never requires an account.</span></div></div>
+        {data.reviews.length ? <><div className="review-grid-v5">{data.reviews.slice(0, reviewLimit).map(review => <article key={review.id} className={`review-card-v5 ${review.is_featured ? "featured" : ""}`}>
+          <div className="review-head-v5"><img src={review.reviewer_avatar_url || "/demo/reviewers/default-reviewer.svg"} alt=""/><div><strong>{reviewerDisplay(review)}</strong><span>Verified Review</span></div><span className="review-stars">{"★".repeat(review.rating)}</span></div>
           <p>“{review.review_text}”</p>{review.is_featured && <span className="featured-review-label"><Sparkles size={12}/> Featured review</span>}
-        </article>)}</div> : <div className="empty-card-v5">No published reviews yet.</div>}
+        </article>)}</div>{data.reviews.length > reviewLimit && <div className="review-more-v8"><button className="btn secondary" onClick={() => setReviewLimit(limit => limit + 6)}>Show more verified reviews</button></div>}</> : <div className="empty-card-v5">No published reviews yet.</div>}
       </section>}
 
       {activeTab === "about" && <section className="profile-section-v5 about-section-v5">
-        <div className="about-story-v5"><span className="section-kicker">ABOUT</span><h2>A little about {p.display_name.split(" ")[0]}</h2><p>{p.bio || "This profile owner has not added an About section yet."}</p></div>
+        <div className="about-story-v5"><span className="section-kicker">ABOUT ME</span><h2>Get to know {p.display_name.split(" ")[0]}.</h2><p>{p.bio || "This profile owner has not added an About section yet."}</p></div>
         <div className="about-side-v5">
           <article><MapPin/><div><span>Your approximate location</span><strong>{visitorContext?.city ? `${visitorContext.city}${visitorContext.country ? `, ${visitorContext.country}` : ""}` : visitorContext ? "Location unavailable" : "Detecting from your network…"}</strong></div></article>
-          <article><BadgeCheck/><div><span>Profile status</span><strong>{p.is_verified ? "Verified demo profile" : "Active profile"}</strong></div></article>
-          <article><LockKeyhole/><div><span>Private media</span><strong>{exclusiveMedia.length} exclusive items</strong></div></article>
-          {(p.public_phone || p.public_email) && <article><Phone/><div><span>Direct contact</span><strong>{p.public_phone || p.public_email}</strong></div></article>}
+          <article><BadgeCheck/><div><span>Profile status</span><strong>{p.is_verified ? "Verified profile" : "Active profile"}</strong></div></article>
+          <article><LockKeyhole/><div><span>Private collection</span><strong>{exclusiveMedia.length} exclusive items</strong></div></article>
+          {(p.public_phone || p.public_email) && <article><Phone/><div><span>Connect privately</span><strong>{p.public_phone || p.public_email}</strong></div></article>}
         </div>
       </section>}
 
-      <footer className="public-profile-footer"><div className="veloura-brand small"><span>V</span>VELOURA</div><p>Client-preview environment. Demo identity, contact details, reviews, media and checkout are fictional.</p></footer>
+      <footer className="public-profile-footer"><div className="veloura-brand small"><span>V</span>VELOURA</div><p>Client preview • Fictional profile, media and review data used for demonstration.</p></footer>
     </div>
 
     {gateIntent && <div className="modal-backdrop" onMouseDown={() => setGateIntent(null)}><section className="gate-modal" onMouseDown={e => e.stopPropagation()}><button className="modal-close" onClick={() => setGateIntent(null)}><X/></button><div className="modal-icon"><ShieldCheck/></div><span className="section-kicker">{gateIntent === "review" ? "REVIEW IDENTITY" : "PRIVATE ACCESS"}</span><h2>{gateIntent === "review" ? "Sign in before reviewing" : "Sign in to continue"}</h2><p>Your account is requested only for this gated action. Normal profile browsing stays open.</p>
@@ -319,9 +322,9 @@ export default function PublicProfilePage() {
       <form className="modal-form" onSubmit={submitAuth}>{authMode === "create" && <label>Display name<input name="display_name" required placeholder="Your name"/></label>}<label>Email<input name="email" type="email" required placeholder="you@example.com"/></label><label>Password<input name="password" type="password" minLength={8} required placeholder="8+ characters"/></label>{authError && <div className="alert error">{authError}</div>}<button className="btn premium-cta wide" disabled={authBusy}>{authBusy ? "Please wait…" : authMode === "signin" ? "Sign in & continue" : "Create account & continue"}</button></form>
     </section></div>}
 
-    {reviewOpen && <div className="modal-backdrop" onMouseDown={() => setReviewOpen(false)}><section className="gate-modal review-modal" onMouseDown={e => e.stopPropagation()}><button className="modal-close" onClick={() => setReviewOpen(false)}><X/></button><span className="section-kicker">SHARE YOUR EXPERIENCE</span><h2>Write a review</h2><p>Your review will be submitted to Admin for moderation before it appears publicly.</p><form className="modal-form" onSubmit={submitReview}><div className="two-fields"><label>First name<input name="reviewer_first_name" required maxLength={60}/></label><label>Last name<input name="reviewer_last_name" required maxLength={60}/></label></div><label>Profile image <small>Optional</small><input name="reviewer_avatar" type="file" accept="image/*"/></label><label>Rating<select name="rating" defaultValue="5">{[5,4,3,2,1].map(n => <option value={n} key={n}>{"★".repeat(n)} {n} star{n > 1 ? "s" : ""}</option>)}</select></label><label>Review<textarea name="review_text" required minLength={10} maxLength={1200} rows={5} placeholder="Write a clear, respectful review…"/></label>{reviewError && <div className="alert error">{reviewError}</div>}<button className="btn premium-cta wide" disabled={reviewBusy}>{reviewBusy ? "Submitting…" : "Submit for review"}</button></form></section></div>}
+    {reviewOpen && <div className="modal-backdrop" onMouseDown={() => setReviewOpen(false)}><section className="gate-modal review-modal" onMouseDown={e => e.stopPropagation()}><button className="modal-close" onClick={() => setReviewOpen(false)}><X/></button><span className="section-kicker">CLIENT REVIEW</span><h2>Share your experience</h2><p>Your review stays private until an Admin verifies it for publication.</p><form className="modal-form" onSubmit={submitReview}><div className="two-fields"><label>First name<input name="reviewer_first_name" required maxLength={60}/></label><label>Last name<input name="reviewer_last_name" required maxLength={60}/></label></div><label>Profile image <small>Optional</small><input name="reviewer_avatar" type="file" accept="image/*"/></label><label>Rating<select name="rating" defaultValue="5">{[5,4,3,2,1].map(n => <option value={n} key={n}>{"★".repeat(n)} {n} star{n > 1 ? "s" : ""}</option>)}</select></label><label>Review<textarea name="review_text" required minLength={10} maxLength={1200} rows={5} placeholder="Share a clear, respectful experience…"/></label>{reviewError && <div className="alert error">{reviewError}</div>}<button className="btn premium-cta wide" disabled={reviewBusy}>{reviewBusy ? "Submitting…" : "Submit for verification"}</button></form></section></div>}
 
-    {checkoutOpen && <div className="modal-backdrop" onMouseDown={() => setCheckoutOpen(false)}><section className="gate-modal checkout-modal" onMouseDown={e => e.stopPropagation()}><button className="modal-close" onClick={() => setCheckoutOpen(false)}><X/></button><div className="modal-icon"><Unlock/></div><span className="section-kicker">DEMO CHECKOUT</span><h2>Unlock private media</h2><div className="checkout-price"><strong>{currency(p.exclusive_price, p.exclusive_currency)}</strong><span>one-time demo unlock</span></div><div className="checkout-benefits"><span><BadgeCheck/> Full private gallery for @{p.username}</span><span><BadgeCheck/> Photos + videos currently marked private</span><span><BadgeCheck/> Creator-specific access only</span></div><div className="demo-warning"><ShieldCheck/><div><strong>No real payment is processed.</strong><span>This button simulates a confirmed digital-content purchase for the client demo. Connect an approved provider before production.</span></div></div><button className="btn premium-cta wide" disabled={checkoutBusy} onClick={completeDemoCheckout}>{checkoutBusy ? "Unlocking…" : `Complete demo purchase • ${currency(p.exclusive_price, p.exclusive_currency)}`}</button></section></div>}
+    {checkoutOpen && <div className="modal-backdrop" onMouseDown={() => setCheckoutOpen(false)}><section className="gate-modal checkout-modal" onMouseDown={e => e.stopPropagation()}><button className="modal-close" onClick={() => setCheckoutOpen(false)}><X/></button><div className="modal-icon"><Unlock/></div><span className="section-kicker">PRIVATE ACCESS</span><h2>Unlock the private gallery</h2><div className="checkout-price"><strong>{currency(p.exclusive_price, p.exclusive_currency)}</strong><span>one-time private-gallery access</span></div><div className="checkout-benefits"><span><BadgeCheck/> Full private gallery for @{p.username}</span><span><BadgeCheck/> Photos + videos currently marked private</span><span><BadgeCheck/> Creator-specific access only</span></div><div className="demo-warning"><ShieldCheck/><div><strong>No real payment is processed.</strong><span>This button simulates a confirmed digital-content purchase for the client demo. Connect an approved provider before production.</span></div></div><button className="btn premium-cta wide" disabled={checkoutBusy} onClick={completeDemoCheckout}>{checkoutBusy ? "Unlocking…" : `Unlock Private Gallery • ${currency(p.exclusive_price, p.exclusive_currency)}`}</button></section></div>}
 
     {selectedMedia && <div className="media-lightbox" onClick={() => setSelectedMedia(null)}><button className="modal-close lightbox-close"><X/></button><div className="lightbox-content" onClick={e => e.stopPropagation()}>{selectedMedia.type === "VIDEO" ? <video src={selectedMedia.media_url || undefined} controls autoPlay onEnded={() => track("VIDEO_COMPLETE", selectedMedia.id)}/> : <img src={selectedMedia.media_url || ""} alt={selectedMedia.title || "Media"}/>}<div className="lightbox-caption"><div><span>{selectedMedia.type}</span><strong>{selectedMedia.title}</strong><p>{selectedMedia.description}</p></div><button className={`tile-like big ${selectedMedia.liked_by_me ? "liked" : ""}`} onClick={() => toggleLike(selectedMedia)}><Heart size={18} fill={selectedMedia.liked_by_me ? "currentColor" : "none"}/>{selectedMedia.likes_count || 0}</button></div></div></div>}
   </main>;

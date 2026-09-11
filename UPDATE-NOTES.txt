@@ -1,53 +1,54 @@
-VELOURA V7 — REVIEW WORKFLOW FIX & CREATOR SUBMISSION
-11 September 2026
+VELOURA V8 — EXPERIENCE POLISH
+Date: 11 Sep 2026
 
-THIS UPDATE IS BASED ON V6.
+WHAT CHANGED
+1. Added reusable skeleton loading for:
+   - Public ES profile hero, tabs, gallery and private collection
+   - ES Studio
+   - Admin Home
+   - Admin ES management
+   - Admin review management
+   - Visitor Intelligence
+   - Visitor detail journey
+   - Next.js route-level loading boundaries for public profile, dashboard and admin
 
-1) FIXED REVIEW SAVE ERROR
-- Fixed the React form reset issue that could show:
-      Cannot read properties of null (reading 'reset')
-  after a review was actually saved.
-- The form element is now captured before async upload/API work and reset safely after success.
-- Success and error messages are no longer shown together for the same action.
+2. Public profile language now feels more premium/personal:
+   - Media -> Gallery
+   - Reviews -> Client Reviews
+   - About -> About Me
+   - Profile likes -> Admirers
+   - Locked/Exclusive -> Private Collection / Private Gallery
+   - Call -> Direct Call
+   - Email -> Private Email
+   - Added Discreet / Refined / Private mood tags
+   - Removed visible "demo" wording from the verified badge and main profile status
 
-2) FIXED ADMIN VERIFICATION FLOW
-- Admin verification now has a clear Verify button instead of an icon-only action.
-- Verify sets status=PUBLISHED and is_published=true.
-- V7 records verified_at and verified_by for the moderation action.
-- Success feedback clearly says Review verified and published.
-- Pending/Reject/Delete actions have clearer labels and error handling.
+3. ES Studio language polished:
+   - ES Studio -> Private Studio (main header)
+   - Post Content -> Add to My Gallery
+   - Media Library -> My Gallery
+   - Reviews -> Client Reviews
+   - Advanced -> Profile Insights
+   - Profile Likes -> Admirers
 
-3) CREATOR CAN SUBMIT REVIEWS FOR OWN PROFILE
-- ES Studio now contains a review submission form.
-- Creator can enter reviewer first name, last name, optional reviewer image, 1–5 stars and review text.
-- Creator review source is CREATOR.
-- Creator submissions are ALWAYS PENDING and hidden publicly until Admin verifies them.
-- Creator can see Verified, Pending and Rejected states in ES Studio.
-- Reviewer image uploads support preview and Cloudinary upload progress.
-- Default reviewer avatar is used when no image is uploaded.
+4. Added `supabase/seed-demo-v8.sql`
+   - Refines the fictional Sienna Vale profile copy and media titles
+   - Uses reserved/example contact data
+   - Adds 20 ORIGINAL fictional verified reviews
+   - Reviews are not copied or paraphrased from real third-party reviews
 
-4) PUBLIC REVIEW LABEL
-- Removed "Verified demo review".
-- Every Admin-verified/published review now displays:
-      Verified review
+5. Added UX-RESEARCH-V8.md documenting the public UX patterns used as inspiration.
 
-5) DATABASE
-If V6 is already installed, run ONCE:
-      supabase/update-v7-review-workflow.sql
+DATABASE
+- No V8 schema migration is required if V7 is already installed.
+- Optional: run `supabase/seed-demo-v8.sql` to replace the demo profile/reviews with the V8 client-demo content.
 
-The V7 migration:
-- adds CREATOR as a valid review source,
-- adds verified_at,
-- adds verified_by,
-- adds review moderation indexes,
-- keeps direct review writes behind the server-side APIs.
+DEPLOYMENT
+1. Optional: run seed-demo-v8.sql in Supabase SQL Editor.
+2. Replace local project files with this V8 package.
+3. Commit and push to main.
+4. Let Vercel build/deploy.
+5. Verify public profile, ES Studio, Admin, reviews and Visitor Intelligence.
 
-MAIN TEST FLOW
-Creator:
-  /dashboard -> Reviews -> Submit for verification
-
-Admin:
-  /admin/reviews -> Pending -> Verify
-
-Public:
-  /u/creator -> Reviews -> Verified review
+NOTE
+Real provider identities, contact details and third-party review text were intentionally not copied into this demo.

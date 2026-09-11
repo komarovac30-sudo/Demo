@@ -77,3 +77,22 @@ Run `supabase/update-v7-review-workflow.sql` after V6 before testing Creator rev
 - Profile/media like edit works.
 - Public visitor location still uses current viewer network/IP approximation.
 - Visitor Intelligence still works.
+
+## V8 — Skeleton & Experience Polish
+
+- [ ] Public profile route shows structured skeleton while data loads.
+- [ ] ES Studio shows dashboard skeleton while auth/profile data loads.
+- [ ] Admin Home shows dashboard skeleton while counts load.
+- [ ] Admin ES management and Reviews show list skeletons.
+- [ ] Visitor Intelligence and visitor detail have skeleton states.
+- [ ] Skeleton shimmer respects reduced-motion preference.
+- [ ] Public tabs read Gallery / Client Reviews / About Me.
+- [ ] Public hero shows Discreet / Refined / Private mood tags.
+- [ ] Profile total likes are labeled Admirers.
+- [ ] Contact buttons read Direct Call / Private Email.
+- [ ] Private content wording consistently uses Private Collection / Private Gallery.
+- [ ] Public review cards display Verified Review.
+- [ ] ES Studio uses Add to My Gallery / My Gallery / Client Reviews / Profile Insights wording.
+- [ ] Running seed-demo-v8.sql creates exactly 20 published fictional reviews for @creator.
+- [ ] Review average/rating count renders correctly with 20 rows.
+- [ ] V7 Creator -> Pending -> Admin Verify -> Public review flow still works after V8 UI changes.

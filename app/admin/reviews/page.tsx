@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-browser";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
+import { ListPageSkeleton } from "@/components/Skeletons";
 
 type Creator = { id:string; display_name:string; username:string };
 type Review = {
@@ -139,7 +140,7 @@ export default function AdminReviews(){
 
   async function logout(){await supabase.auth.signOut();location.href="/login";}
 
-  if(!ready)return <div className="center-screen"><span className="loader-orb"/></div>;
+  if(!ready)return <ListPageSkeleton/>;
   if(!authorized)return <div className="center-screen"><Link className="btn primary" href="/login">Admin login</Link></div>;
 
   const pendingCount=reviews.filter(r=>r.status==="PENDING").length;

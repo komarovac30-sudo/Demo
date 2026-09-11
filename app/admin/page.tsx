@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Activity, BadgeCheck, ChevronRight, Eye, LogOut, MessageSquareText, ShieldCheck, Star, Unlock, UserPlus, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase-browser";
+import { StudioSkeleton } from "@/components/Skeletons";
 
 type Creator = { id:string; display_name:string; username:string; avatar_url?:string|null; headline?:string|null; is_active:boolean; is_verified?:boolean };
 type Analytics = { totals:{ unique_visitors:number; profile_views:number; media_views:number; unlocks:number; likes:number; active_today:number } };
@@ -26,7 +27,7 @@ export default function AdminHome(){
     setReady(true);
   },[]);useEffect(()=>{load();},[load]);
   async function logout(){await supabase.auth.signOut();location.href="/login";}
-  if(!ready)return <div className="center-screen"><span className="loader-orb"/><p>Opening command center…</p></div>;
+  if(!ready)return <StudioSkeleton admin/>;
   if(!authorized)return <div className="center-screen"><div className="friendly-error"><h2>Admin access required</h2><Link className="btn primary" href="/login">Go to login</Link></div></div>;
   const activeEs=creators.filter(c=>c.is_active).length;
   return <main className="dashboard-page-v5 admin-v5">
