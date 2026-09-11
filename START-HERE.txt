@@ -1,40 +1,30 @@
-VELOURA ES PROFILE PLATFORM — V6 STUDIO POLISH
+VELOURA ES PROFILE PLATFORM — V7 REVIEW WORKFLOW
 
-THIS ZIP IS THE COMPLETE SOURCE PROJECT BASED ON V5 + THE LATEST CREATOR-STUDIO FIXES.
+THIS ZIP IS THE COMPLETE SOURCE PROJECT BASED ON V6 + THE REVIEW WORKFLOW FIXES.
 
-IF YOUR CURRENT DATABASE ALREADY HAS V5
-1. Extract the ZIP.
-2. Copy the CONTENTS into your local GitHub Demo repository and replace existing files.
-3. Keep your existing Vercel environment variables.
-4. In Supabase SQL Editor run ONCE:
-       supabase/update-v6-studio-polish.sql
-5. GitHub Desktop -> review changes -> Commit to main -> Push origin.
-6. Vercel auto-deploys.
+IF YOUR DATABASE IS ALREADY ON V6
+1. Extract this ZIP and replace your local Demo project files.
+2. Keep your existing Vercel environment variables.
+3. In Supabase SQL Editor run ONCE:
+       supabase/update-v7-review-workflow.sql
+4. Commit + Push with GitHub Desktop.
+5. Let Vercel deploy.
 
-IF YOU NEVER RAN V5
-Run these in order:
+IF YOU NEVER RAN V5/V6
+Run in order:
        supabase/update-v5-full-rework.sql
        supabase/update-v6-studio-polish.sql
-Optional demo data:
+       supabase/update-v7-review-workflow.sql
+Optional fictional demo data:
        supabase/seed-demo-v6.sql
 
-LATEST V6 CHECKS
-- /dashboard: cover upload button is clearly visible.
-- Select a content file: preview + file information appears immediately.
-- Publish: progress changes while Cloudinary uploads, then Saving, then Published.
-- New item appears in Media Library without needing a manual page refresh.
-- Location Label field is removed from ES profile editing.
-- /u/creator uses the viewer's IP/network city instead of an ES-entered location.
-- Profile Likes can be edited from the Home metric.
-- Every media item's like count can be edited from Media Library.
-
-MAIN ROUTES
-Public profile:             /u/creator
-ES Studio:                  /dashboard
-ES Visitor Intelligence:    /dashboard/visitors
-Admin Home:                 /admin
-Admin ES Management:        /admin/creators
-Admin Review Management:    /admin/reviews
-Admin Visitor Intelligence: /admin/visitors
+V7 REVIEW CHECK
+- Admin manual review save no longer shows the null/reset error.
+- Creator can submit a review from /dashboard.
+- Creator-submitted review stays PENDING.
+- Admin sees it in /admin/reviews.
+- Admin clicks Verify.
+- Review becomes PUBLISHED/VERIFIED.
+- /u/creator shows the review with the text "Verified review".
 
 See README.md, UPDATE-NOTES.txt and QA-CHECKLIST.md.

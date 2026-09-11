@@ -58,9 +58,11 @@ create table public.reviews (
   is_featured boolean not null default false,
   is_published boolean not null default false,
   status text not null default 'PENDING' check (status in ('PENDING','PUBLISHED','REJECTED')),
-  source text not null default 'ADMIN' check (source in ('VISITOR','ADMIN')),
+  source text not null default 'ADMIN' check (source in ('VISITOR','ADMIN','CREATOR')),
   visitor_id uuid references public.profiles(id) on delete set null,
   created_by uuid references public.profiles(id) on delete set null,
+  verified_at timestamptz,
+  verified_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now()
 );
 

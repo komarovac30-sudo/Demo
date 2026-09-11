@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   if (["media", "profile-avatar", "profile-cover"].includes(purpose) && profile.role !== "CREATOR") {
     return NextResponse.json({ error: "Creator authorization required." }, { status: 403 });
   }
-  if (purpose === "review-avatar" && !["VISITOR", "SUPER_ADMIN"].includes(profile.role)) {
+  if (purpose === "review-avatar" && !["VISITOR", "SUPER_ADMIN", "CREATOR"].includes(profile.role)) {
     return NextResponse.json({ error: "This account cannot upload review images." }, { status: 403 });
   }
 

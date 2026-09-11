@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const admin = serviceSupabase();
   const { data: reviews, error } = await admin
     .from("reviews")
-    .select("id,creator_id,reviewer_name,reviewer_first_name,reviewer_last_name,reviewer_avatar_url,rating,review_text,is_featured,is_published,status,source,created_at")
+    .select("id,creator_id,reviewer_name,reviewer_first_name,reviewer_last_name,reviewer_avatar_url,rating,review_text,is_featured,is_published,status,source,created_at,verified_at,verified_by")
     .order("created_at", { ascending: false })
     .limit(500);
 

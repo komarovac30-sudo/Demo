@@ -1,4 +1,4 @@
-# VELOURA — ES Profile Platform Demo (V6 Studio Polish)
+# VELOURA — ES Profile Platform Demo (V7 Review Workflow)
 
 VELOURA is a fictional client-preview build of the ES Profile Platform described in the SRS. It keeps the existing **Next.js + Supabase + Cloudinary + Vercel** architecture, but reworks the product into three clear experiences:
 
@@ -24,7 +24,17 @@ All names, phone numbers, email addresses, reviews, media artwork, IP addresses 
 /admin/visitors/[key]     Admin visitor detail
 ```
 
-## V6 highlights
+## V7 highlights
+
+
+### Review workflow — V7
+- Fixed the post-save `Cannot read properties of null (reading 'reset')` review form error.
+- CREATOR can submit reviews for their own profile from ES Studio.
+- Creator-submitted reviews are always Pending until SUPER_ADMIN verifies them.
+- Admin verification records `verified_at` / `verified_by` and publishes the review.
+- Admin moderation now uses clear Verify / Pending / Reject / Delete actions.
+- Public published-review label is now **Verified review**.
+- Reviewer avatar upload works for Creator, Visitor and Admin review flows.
 
 ### Public profile
 - Cinematic Luxury Dark redesign.
@@ -94,7 +104,13 @@ supabase/update-v5-full-rework.sql
 supabase/update-v6-studio-polish.sql
 ```
 
-4. For a populated client preview, optionally run:
+4. Then run once:
+
+```text
+supabase/update-v7-review-workflow.sql
+```
+
+5. For a populated client preview, optionally run:
 
 ```text
 supabase/seed-demo-v6.sql
@@ -110,7 +126,7 @@ For a completely fresh Supabase project, use `supabase/full-schema.sql` instead 
 2. Copy the **contents** into your local `Demo` GitHub repository folder.
 3. Replace the existing application files.
 4. Do not overwrite or commit private `.env` values.
-5. Run the V5 migration if needed, then run `supabase/update-v6-studio-polish.sql` before using the new V6 controls.
+5. Run the V5/V6 migrations if needed, then run `supabase/update-v7-review-workflow.sql` before using the V7 review workflow.
 6. In GitHub Desktop: review changes → Commit to `main` → Push origin.
 7. Vercel should deploy automatically.
 8. Test `/u/creator`, `/dashboard`, `/dashboard/visitors`, `/admin`, `/admin/creators`, `/admin/reviews`, `/admin/visitors`.
@@ -141,7 +157,7 @@ Production validation:
 npm run build
 ```
 
-## Latest V6 creator-studio behavior
+## Latest V7 creator-studio behavior
 
 - Public location is the current viewer's approximate IP/network location, not a creator-entered city.
 - Creator cover upload is always visible and shows progress.
@@ -168,3 +184,8 @@ hello@siennavale.demo
 ```
 
 The `.demo` email domain and North American 555 number are placeholders and are not intended to contact a real person.
+
+
+## V7 database note
+
+If V6 is already deployed, only run `supabase/update-v7-review-workflow.sql` once before deploying the V7 code.

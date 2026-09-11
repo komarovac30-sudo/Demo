@@ -27,6 +27,8 @@ alter table public.reviews add column if not exists reviewer_last_name text;
 alter table public.reviews add column if not exists status text not null default 'PUBLISHED';
 alter table public.reviews add column if not exists source text not null default 'ADMIN';
 alter table public.reviews add column if not exists visitor_id uuid references public.profiles(id) on delete set null;
+alter table public.reviews add column if not exists verified_at timestamptz;
+alter table public.reviews add column if not exists verified_by uuid references public.profiles(id) on delete set null;
 
 update public.reviews
 set reviewer_first_name = coalesce(reviewer_first_name, split_part(reviewer_name, ' ', 1)),
@@ -40,7 +42,7 @@ do $$ begin
     alter table public.reviews add constraint reviews_status_check check (status in ('PENDING','PUBLISHED','REJECTED'));
   end if;
   if not exists (select 1 from pg_constraint where conname='reviews_source_check') then
-    alter table public.reviews add constraint reviews_source_check check (source in ('VISITOR','ADMIN'));
+    alter table public.reviews add constraint reviews_source_check check (source in ('VISITOR','ADMIN','CREATOR'));
   end if;
 end $$;
 

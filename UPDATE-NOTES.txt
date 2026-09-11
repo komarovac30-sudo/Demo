@@ -1,46 +1,53 @@
-VELOURA V6 — CREATOR STUDIO POLISH UPDATE
+VELOURA V7 — REVIEW WORKFLOW FIX & CREATOR SUBMISSION
 11 September 2026
 
-Changes requested from the latest ES Studio review:
+THIS UPDATE IS BASED ON V6.
 
-1) SMOOTHER CONTENT UPLOAD
-- Selected image/video now appears immediately inside the upload area before publishing.
-- File name, file size and media type are shown.
-- Change and clear controls are available before upload.
-- Real Cloudinary upload progress is shown from 0–100%.
-- Upload flow now has visible stages: Ready -> Uploading -> Saving -> Published.
-- New media is inserted into Media Library immediately after the database insert succeeds instead of waiting for a later full refresh.
-- Publish button stays disabled until a file is selected.
+1) FIXED REVIEW SAVE ERROR
+- Fixed the React form reset issue that could show:
+      Cannot read properties of null (reading 'reset')
+  after a review was actually saved.
+- The form element is now captured before async upload/API work and reset safely after success.
+- Success and error messages are no longer shown together for the same action.
 
-2) COVER PHOTO UPLOAD
-- Cover upload is now an explicit, always-visible ES Studio control.
-- A second high-contrast Upload/Replace control is placed directly on the cover preview.
-- Upload percentage is visible while the cover is uploading.
-- Existing remove-cover support remains.
+2) FIXED ADMIN VERIFICATION FLOW
+- Admin verification now has a clear Verify button instead of an icon-only action.
+- Verify sets status=PUBLISHED and is_published=true.
+- V7 records verified_at and verified_by for the moderation action.
+- Success feedback clearly says Review verified and published.
+- Pending/Reject/Delete actions have clearer labels and error handling.
 
-3) AUTOMATIC VIEWER LOCATION
-- Creator/ES no longer edits a manual Location Label in the dashboard.
-- Public profile location uses the current visitor/viewer's approximate city/country returned by the existing Vercel/IP location flow.
-- The same detected viewer location is used in the hero/stat/About presentation.
-- Legacy profiles.location_label remains in the database only for backwards compatibility and is not used by V6 public UI.
+3) CREATOR CAN SUBMIT REVIEWS FOR OWN PROFILE
+- ES Studio now contains a review submission form.
+- Creator can enter reviewer first name, last name, optional reviewer image, 1–5 stars and review text.
+- Creator review source is CREATOR.
+- Creator submissions are ALWAYS PENDING and hidden publicly until Admin verifies them.
+- Creator can see Verified, Pending and Rejected states in ES Studio.
+- Reviewer image uploads support preview and Cloudinary upload progress.
+- Default reviewer avatar is used when no image is uploaded.
 
-4) SMOOTHER PROFILE IMAGE UPLOAD
-- Avatar/cover Cloudinary uploads now expose upload progress.
-- UI updates immediately when the new image has been saved.
+4) PUBLIC REVIEW LABEL
+- Removed "Verified demo review".
+- Every Admin-verified/published review now displays:
+      Verified review
 
-5) EDITABLE LIKE COUNTS
-- New profiles.profile_likes_count field controls the profile-level likes shown publicly.
-- ES Studio Home lets the creator edit that profile-level count inline.
-- Each Media Library item lets the creator edit its own likes_count inline.
-- API checks that the signed-in CREATOR owns the profile/media before updating counts.
-- Real Visitor media like/unlike still works and also increments/decrements the profile-level count.
+5) DATABASE
+If V6 is already installed, run ONCE:
+      supabase/update-v7-review-workflow.sql
 
-DATABASE
-Existing V5 database:
-  Run supabase/update-v6-studio-polish.sql once.
+The V7 migration:
+- adds CREATOR as a valid review source,
+- adds verified_at,
+- adds verified_by,
+- adds review moderation indexes,
+- keeps direct review writes behind the server-side APIs.
 
-Fresh database:
-  Use supabase/full-schema.sql (updated to V6).
+MAIN TEST FLOW
+Creator:
+  /dashboard -> Reviews -> Submit for verification
 
-IMPORTANT
-The manual like counters are included because this is a client-demo build. For a production reputation/engagement product, consider separating actual verified engagement from any curated/demo display count so analytics cannot be mistaken for organic activity.
+Admin:
+  /admin/reviews -> Pending -> Verify
+
+Public:
+  /u/creator -> Reviews -> Verified review

@@ -2,36 +2,105 @@ import { NextRequest, NextResponse } from "next/server";
 import { serviceSupabase } from "@/lib/supabase-service";
 import { getVisitorContext } from "@/lib/visitor-context";
 
-function cleanName(value: unknown) { return String(value || "").trim().replace(/\s+/g, " ").slice(0, 60); }
+function cleanName(value: unknown) {
+  return String(value || "").trim().replace(/\s+/g, " ").slice(0, 60);
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const token = req.headers.get("authorization")?.replace("Bearer ", "") || "";
+    if (!token) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+
+    const admin = serviceSupabase();
+    const { data: { user } } = await admin.auth.getUser(token);
+    if (!user) return NextResponse.json({ error: "Your session is not valid." }, { status: 401 });
+
+    const { data: viewer } = await admin.from("profiles").select("id,role").eq("id", user.id).maybeSingle();
+    if (!viewer) return NextResponse.json({ error: "Profile not found." }, { status: 401 });
+
+    if (viewer.role === "CREATOR") {
+      const { data: reviews, error } = await admin
+        .from("reviews")
+        .select("id,creator_id,reviewer_name,reviewer_first_name,reviewer_last_name,reviewer_avatar_url,rating,review_text,is_featured,is_published,status,source,created_at,verified_at")
+        .eq("creator_id", viewer.id)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ reviews: reviews || [] });
+    }
+
+    if (viewer.role === "VISITOR") {
+      const { data: reviews, error } = await admin
+        .from("reviews")
+        .select("id,creator_id,reviewer_name,reviewer_first_name,reviewer_last_name,reviewer_avatar_url,rating,review_text,is_published,status,source,created_at,verified_at")
+        .eq("visitor_id", viewer.id)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ reviews: reviews || [] });
+    }
+
+    return NextResponse.json({ error: "Use the Admin review endpoint for platform-wide review management." }, { status: 403 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to load reviews." }, { status: 500 });
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get("authorization")?.replace("Bearer ", "") || "";
     if (!token) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+
     const admin = serviceSupabase();
     const { data: { user } } = await admin.auth.getUser(token);
     if (!user) return NextResponse.json({ error: "Your session is not valid." }, { status: 401 });
+
     const { data: viewer } = await admin.from("profiles").select("id,role").eq("id", user.id).maybeSingle();
-    if (!viewer || !["VISITOR", "SUPER_ADMIN"].includes(viewer.role)) return NextResponse.json({ error: "This account cannot submit reviews." }, { status: 403 });
+    if (!viewer || !["VISITOR", "SUPER_ADMIN", "CREATOR"].includes(viewer.role)) {
+      return NextResponse.json({ error: "This account cannot submit reviews." }, { status: 403 });
+    }
 
     const body = await req.json();
-    const creatorId = String(body.creator_id || "");
+    const requestedCreatorId = String(body.creator_id || "");
+    const creatorId = viewer.role === "CREATOR" ? viewer.id : requestedCreatorId;
     const firstName = cleanName(body.reviewer_first_name);
     const lastName = cleanName(body.reviewer_last_name);
     const rating = Number(body.rating);
     const reviewText = String(body.review_text || "").trim().slice(0, 1200);
     const avatarUrl = body.reviewer_avatar_url ? String(body.reviewer_avatar_url).slice(0, 1000) : null;
+
     if (!creatorId || !firstName || !lastName || !Number.isInteger(rating) || rating < 1 || rating > 5 || reviewText.length < 10) {
       return NextResponse.json({ error: "First name, last name, 1–5 stars and a review of at least 10 characters are required." }, { status: 400 });
     }
-    const { data: creator } = await admin.from("profiles").select("id").eq("id", creatorId).eq("role", "CREATOR").eq("is_active", true).maybeSingle();
+
+    if (viewer.role === "CREATOR" && requestedCreatorId && requestedCreatorId !== viewer.id) {
+      return NextResponse.json({ error: "Creators can only submit reviews for their own profile." }, { status: 403 });
+    }
+
+    const { data: creator } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("id", creatorId)
+      .eq("role", "CREATOR")
+      .eq("is_active", true)
+      .maybeSingle();
     if (!creator) return NextResponse.json({ error: "Profile not found." }, { status: 404 });
 
-    const source = viewer.role === "SUPER_ADMIN" ? "ADMIN" : "VISITOR";
+    const source = viewer.role === "SUPER_ADMIN" ? "ADMIN" : viewer.role === "CREATOR" ? "CREATOR" : "VISITOR";
     const status = viewer.role === "SUPER_ADMIN" && body.publish !== false ? "PUBLISHED" : "PENDING";
+
     if (viewer.role === "VISITOR") {
-      const { data: existing } = await admin.from("reviews").select("id,status").eq("creator_id", creatorId).eq("visitor_id", viewer.id).neq("status", "REJECTED").limit(1).maybeSingle();
-      if (existing) return NextResponse.json({ error: "You already have a review for this profile. Admin moderation is still in progress or it is already published." }, { status: 409 });
+      const { data: existing } = await admin
+        .from("reviews")
+        .select("id,status")
+        .eq("creator_id", creatorId)
+        .eq("visitor_id", viewer.id)
+        .neq("status", "REJECTED")
+        .limit(1)
+        .maybeSingle();
+      if (existing) {
+        return NextResponse.json({ error: "You already have a review for this profile. Admin moderation is still in progress or it is already published." }, { status: 409 });
+      }
     }
 
     const reviewerName = `${firstName} ${lastName}`.trim();
@@ -49,13 +118,21 @@ export async function POST(req: NextRequest) {
       source,
       visitor_id: viewer.role === "VISITOR" ? viewer.id : null,
       created_by: viewer.id,
-    }).select("id,status").single();
+      verified_at: status === "PUBLISHED" ? new Date().toISOString() : null,
+      verified_by: status === "PUBLISHED" ? viewer.id : null,
+    }).select("id,status,source").single();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
     if (viewer.role === "VISITOR") {
       const context = await getVisitorContext(req);
-      await admin.from("activity_events").insert({ profile_id: creatorId, visitor_id: viewer.id, event_type: "REVIEW_SUBMITTED", metadata: { page: "public-profile", ...context } });
+      await admin.from("activity_events").insert({
+        profile_id: creatorId,
+        visitor_id: viewer.id,
+        event_type: "REVIEW_SUBMITTED",
+        metadata: { page: "public-profile", ...context },
+      });
     }
+
     return NextResponse.json({ ok: true, review });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to submit review." }, { status: 500 });

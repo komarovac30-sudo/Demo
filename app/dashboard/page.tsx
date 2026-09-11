@@ -3,8 +3,8 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  BarChart3, Check, ChevronRight, Eye, FileImage, Heart, ImagePlus, Images, LockKeyhole, LogOut, Mail,
-  Pencil, Phone, RotateCcw, Save, Sparkles, Star, Trash2, Unlock, Upload, Users, X
+  BadgeCheck, BarChart3, Check, ChevronRight, Eye, FileImage, Heart, ImagePlus, Images, LockKeyhole, LogOut, Mail,
+  Pencil, Phone, RotateCcw, Save, ShieldCheck, Sparkles, Star, Trash2, Unlock, Upload, Users, X
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-browser";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
@@ -16,7 +16,11 @@ type Profile = {
   profile_likes_count?:number;
 };
 type Media = { id:string; type:"PHOTO"|"VIDEO"; visibility:"PUBLIC"|"LOCKED"; title:string|null; description:string|null; media_url:string; thumbnail_url?:string|null; created_at:string; likes_count?:number };
-type Review = { id:string; reviewer_name:string; reviewer_first_name?:string|null; reviewer_last_name?:string|null; reviewer_avatar_url?:string|null; rating:number; review_text:string; is_featured:boolean };
+type Review = {
+  id:string; reviewer_name:string; reviewer_first_name?:string|null; reviewer_last_name?:string|null; reviewer_avatar_url?:string|null;
+  rating:number; review_text:string; is_featured:boolean; is_published?:boolean; status:"PENDING"|"PUBLISHED"|"REJECTED";
+  source:"VISITOR"|"ADMIN"|"CREATOR"; created_at:string; verified_at?:string|null;
+};
 type Analytics = { totals:{ unique_visitors:number; profile_views:number; media_views:number; unlocks:number; likes:number; active_today:number } };
 type Payment = { amount:number|string; status:string };
 type UploadStage = "idle"|"ready"|"authorizing"|"uploading"|"saving"|"done";
@@ -37,7 +41,9 @@ export default function CreatorDashboard() {
   const [uploadProgress,setUploadProgress]=useState(0); const [uploadStage,setUploadStage]=useState<UploadStage>("idle");
   const [editingProfileLikes,setEditingProfileLikes]=useState(false); const [profileLikesDraft,setProfileLikesDraft]=useState("0");
   const [editingMediaLike,setEditingMediaLike]=useState<string|null>(null); const [mediaLikeDraft,setMediaLikeDraft]=useState("");
-  const avatarInput=useRef<HTMLInputElement>(null); const coverInput=useRef<HTMLInputElement>(null); const mediaInput=useRef<HTMLInputElement>(null);
+  const [reviewAvatarPreview,setReviewAvatarPreview]=useState("");
+  const [reviewUploadProgress,setReviewUploadProgress]=useState(0);
+  const avatarInput=useRef<HTMLInputElement>(null); const coverInput=useRef<HTMLInputElement>(null); const mediaInput=useRef<HTMLInputElement>(null); const reviewAvatarInput=useRef<HTMLInputElement>(null);
 
   const load=useCallback(async()=>{
     const {data:{user}}=await supabase.auth.getUser(); if(!user){setReady(true);return;}
@@ -45,12 +51,19 @@ export default function CreatorDashboard() {
     if(!p||p.role!=="CREATOR"){setReady(true);return;} setAuthorized(true); setProfile(p as Profile); setProfileLikesDraft(String(Number(p.profile_likes_count||0)));
     const [{data:m},{data:r},{data:pay},{data:{session}}]=await Promise.all([
       supabase.from("media").select("id,type,visibility,title,description,media_url,thumbnail_url,created_at,likes_count").eq("creator_id",user.id).order("created_at",{ascending:false}),
-      supabase.from("reviews").select("id,reviewer_name,reviewer_first_name,reviewer_last_name,reviewer_avatar_url,rating,review_text,is_featured").eq("creator_id",user.id).eq("is_published",true).order("is_featured",{ascending:false}),
+      supabase.from("reviews").select("id,reviewer_name,reviewer_first_name,reviewer_last_name,reviewer_avatar_url,rating,review_text,is_featured,is_published,status,source,created_at").eq("creator_id",user.id).eq("is_published",true).order("is_featured",{ascending:false}),
       supabase.from("payments").select("amount,status").eq("creator_id",user.id).eq("status","CONFIRMED"),
       supabase.auth.getSession(),
     ]);
     setMedia((m||[]) as Media[]); setReviews((r||[]) as Review[]); setPayments((pay||[]) as Payment[]);
-    if(session?.access_token){const res=await fetch("/api/analytics/visitors",{headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"});if(res.ok)setAnalytics(await res.json() as Analytics);}
+    if(session?.access_token){
+      const [analyticsRes,reviewsRes]=await Promise.all([
+        fetch("/api/analytics/visitors",{headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"}),
+        fetch("/api/reviews",{headers:{Authorization:`Bearer ${session.access_token}`},cache:"no-store"}),
+      ]);
+      if(analyticsRes.ok)setAnalytics(await analyticsRes.json() as Analytics);
+      if(reviewsRes.ok){const body=await reviewsRes.json();setReviews((body.reviews||[]) as Review[]);}
+    }
     setReady(true);
   },[]);
   useEffect(()=>{load();},[load]);
@@ -127,11 +140,28 @@ export default function CreatorDashboard() {
     }catch(err){flash(err instanceof Error?err.message:"Unable to update likes.",true);}finally{setBusy("");}
   }
 
+  async function submitCreatorReview(e:FormEvent<HTMLFormElement>){
+    e.preventDefault();if(!profile)return;const formEl=e.currentTarget;const form=new FormData(formEl);setBusy("review-create");setError("");setReviewUploadProgress(0);
+    try{
+      const {data:{session}}=await supabase.auth.getSession();if(!session?.access_token)throw new Error("Please sign in again.");
+      let avatarUrl:string|null=null;const file=form.get("reviewer_avatar") as File;
+      if(file?.size){avatarUrl=(await uploadToCloudinary(file,session.access_token,"review-avatar",{onProgress:setReviewUploadProgress})).secure_url;}
+      const res=await fetch("/api/reviews",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({
+        creator_id:profile.id,reviewer_first_name:form.get("reviewer_first_name"),reviewer_last_name:form.get("reviewer_last_name"),rating:Number(form.get("rating")),review_text:form.get("review_text"),reviewer_avatar_url:avatarUrl
+      })});
+      const body=await res.json();if(!res.ok)throw new Error(body.error||"Unable to submit review.");
+      formEl.reset();if(reviewAvatarInput.current)reviewAvatarInput.current.value="";setReviewAvatarPreview("");setReviewUploadProgress(0);
+      flash("Review submitted for Admin verification. It will stay hidden until verified.");await load();
+    }catch(err){flash(err instanceof Error?err.message:"Unable to submit review.",true);}finally{setBusy("");setReviewUploadProgress(0);}
+  }
+
   async function removeMedia(id:string){if(!confirm("Remove this media item?"))return;const {error:removeError}=await supabase.from("media").delete().eq("id",id);if(removeError)flash(removeError.message,true);else{setMedia(prev=>prev.filter(item=>item.id!==id));flash("Media removed.");}}
   async function logout(){await supabase.auth.signOut();location.href="/login";}
 
   const revenue=useMemo(()=>payments.reduce((sum,p)=>sum+Number(p.amount||0),0),[payments]);
-  const rating=useMemo(()=>reviews.length?reviews.reduce((s,r)=>s+r.rating,0)/reviews.length:0,[reviews]);
+  const publishedReviews=useMemo(()=>reviews.filter(r=>r.status==="PUBLISHED"||r.is_published),[reviews]);
+  const pendingReviews=useMemo(()=>reviews.filter(r=>r.status==="PENDING"),[reviews]);
+  const rating=useMemo(()=>publishedReviews.length?publishedReviews.reduce((sum,r)=>sum+r.rating,0)/publishedReviews.length:0,[publishedReviews]);
 
   if(!ready)return <div className="center-screen"><span className="loader-orb"/><p>Opening studio…</p></div>;
   if(!authorized||!profile)return <div className="center-screen"><div className="friendly-error"><h2>ES Studio access required</h2><Link className="btn primary" href="/login">Go to login</Link></div></div>;
@@ -195,7 +225,24 @@ export default function CreatorDashboard() {
 
       <section className="advanced-entry-v5"><div className="advanced-icon"><BarChart3/></div><div><span className="workspace-kicker">ADVANCED</span><h2>Visitor Intelligence & deeper analytics</h2><p>Unique visitor/IP rows, session history, device/location signals, content interest and activity journey live here — away from your everyday Home screen.</p></div><Link className="btn secondary" href="/dashboard/visitors">Open Advanced <ChevronRight size={17}/></Link></section>
 
-      <section id="reviews" className="workspace-panel-v5"><div className="panel-head-v5"><div><span className="workspace-kicker">REVIEWS</span><h2>Your public reputation</h2><p>{rating?`${rating.toFixed(1)} average from ${reviews.length} published reviews`:"No published reviews yet."}</p></div><Star/></div>{reviews.length===0?<div className="empty-card-v5">Published reviews will appear here after Admin moderation.</div>:<div className="dashboard-review-grid-v5">{reviews.slice(0,4).map(r=><article key={r.id}><img src={r.reviewer_avatar_url||"/demo/reviewers/default-reviewer.svg"} alt=""/><div><span className="review-stars">{"★".repeat(r.rating)}</span><p>“{r.review_text}”</p><strong>{r.reviewer_first_name?`${r.reviewer_first_name} ${r.reviewer_last_name||""}`:r.reviewer_name}</strong></div></article>)}</div>}</section>
+      <section id="reviews" className="workspace-panel-v5 creator-review-manager-v7">
+        <div className="panel-head-v5"><div><span className="workspace-kicker">REVIEWS</span><h2>Submit reviews for verification.</h2><p>Add reviews you have received. They stay private as Pending until Admin verifies them. Verified reviews then appear on your public profile.</p></div><BadgeCheck/></div>
+        <div className="creator-review-summary-v7"><span><strong>{publishedReviews.length}</strong> Verified</span><span><strong>{pendingReviews.length}</strong> Pending</span><span><strong>{rating?rating.toFixed(1):"—"}</strong> Average rating</span></div>
+        <div className="creator-review-layout-v7">
+          <form className="profile-form-v5 creator-review-form-v7" onSubmit={submitCreatorReview}>
+            <div className="two-fields"><label>Reviewer first name<input name="reviewer_first_name" required maxLength={60} placeholder="Jordan"/></label><label>Reviewer last name<input name="reviewer_last_name" required maxLength={60} placeholder="K."/></label></div>
+            <label>Reviewer profile image <small>Optional — a default avatar is used if empty</small><input ref={reviewAvatarInput} name="reviewer_avatar" type="file" accept="image/*" onChange={e=>{const file=e.target.files?.[0];if(!file){setReviewAvatarPreview("");return;}setReviewAvatarPreview(URL.createObjectURL(file));}}/></label>
+            {reviewAvatarPreview&&<div className="review-avatar-preview-v7"><img src={reviewAvatarPreview} alt="Reviewer preview"/><div><strong>Photo ready</strong><span>{busy==="review-create"&&reviewUploadProgress?`Uploading ${reviewUploadProgress}%`:"This image will be attached to the review."}</span></div></div>}
+            <label>Rating<select name="rating" defaultValue="5">{[5,4,3,2,1].map(n=><option value={n} key={n}>{"★".repeat(n)} {n} star{n>1?"s":""}</option>)}</select></label>
+            <label>Review<textarea name="review_text" required minLength={10} maxLength={1200} rows={5} placeholder="Add the review text you received…"/></label>
+            <div className="review-verification-note-v7"><ShieldCheck size={16}/><div><strong>Admin verification required</strong><span>This review will not appear publicly until an Admin verifies it.</span></div></div>
+            <button className="btn primary" disabled={busy==="review-create"}>{busy==="review-create"?(reviewUploadProgress?`Uploading ${reviewUploadProgress}%…`:"Submitting…") : "Submit for verification"}</button>
+          </form>
+          <div className="creator-review-list-v7">
+            {reviews.length===0?<div className="empty-card-v5">No reviews yet. Add the first review using the form.</div>:reviews.slice(0,8).map(r=><article key={r.id}><img src={r.reviewer_avatar_url||"/demo/reviewers/default-reviewer.svg"} alt=""/><div className="creator-review-copy-v7"><div><strong>{r.reviewer_first_name?`${r.reviewer_first_name} ${r.reviewer_last_name||""}`:r.reviewer_name}</strong><span className={`status-chip-v5 ${r.status.toLowerCase()}`}>{r.status==="PUBLISHED"?"VERIFIED":r.status}</span></div><span className="review-stars">{"★".repeat(r.rating)}</span><p>“{r.review_text}”</p><small>{r.status==="PUBLISHED"?"Visible on public profile":r.status==="PENDING"?"Waiting for Admin verification":"Not public"}</small></div></article>)}
+          </div>
+        </div>
+      </section>
     </section>
   </main>;
 }

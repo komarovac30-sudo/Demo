@@ -1,58 +1,79 @@
-# VELOURA V6 — Client Demo QA Checklist
+# VELOURA V7 — Review Workflow QA Checklist
 
-Run V5 migration first if not already applied, then run `supabase/update-v6-studio-polish.sql`.
+Run `supabase/update-v7-review-workflow.sql` after V6 before testing Creator review submission.
 
-## ES Studio — Latest V6 fixes
-- `/dashboard` loads for CREATOR without errors.
-- **Cover photo** has an obvious Upload/Change button outside the image as well as a high-contrast button on the cover itself.
-- Selecting a cover image starts visible percentage progress and updates the preview after save.
-- Selecting a profile image starts visible percentage progress and updates the avatar.
-- **Location Label field is no longer editable.** An information card explains that public location is detected from the current viewer's IP/network.
-- Home **Profile Likes** metric has Edit count; valid whole number saves and remains after refresh.
-- Negative/decimal/out-of-range profile-like values are rejected.
-- Each Media Library card has a like-count edit control and persists the value after refresh.
-- Creator cannot edit another creator's media likes by changing the media ID in the API request.
+## 1. Admin manual review — reset bug
+- Open `/admin/reviews` as SUPER_ADMIN.
+- Select an ES.
+- Enter first name, last name, rating and review text.
+- Optionally upload reviewer image.
+- Click Save review.
+- Review saves successfully.
+- Success message appears only once.
+- `Cannot read properties of null (reading 'reset')` does NOT appear.
+- Form clears only after successful save.
+- If no image was uploaded, default reviewer avatar is shown.
 
-## Content upload
-- Publish button is disabled before a file is selected.
-- Selecting a photo shows its actual local preview, file name and file size without uploading it yet.
-- Selecting a video shows video preview and file information.
-- Change replaces the selected file; X clears it.
-- `Ready to publish` state appears after file selection.
-- During Cloudinary transfer, percentage/progress bar changes.
-- After transfer, UI changes to `saving post` while Supabase record is created.
-- On success, confirmation appears and new media is immediately visible in Media Library without a manual refresh.
-- Form/file selection clears after success.
-- Failed Cloudinary upload shows an error and keeps the selected file available for retry.
-- Failed Supabase insert shows an error instead of falsely reporting Published.
-- PUBLIC media appears on `/u/creator`; LOCKED media remains protected.
+## 2. Creator-submitted review
+- Open `/dashboard` as CREATOR.
+- Scroll to Reviews.
+- Enter reviewer first name + last name.
+- Optionally select reviewer image; preview appears.
+- Select 1–5 stars.
+- Enter at least 10 characters of review text.
+- Click `Submit for verification`.
+- Success message confirms Admin verification is required.
+- New review appears in Creator list as PENDING.
+- Review does NOT appear publicly yet.
+- Multiple Creator-submitted reviews are allowed because they represent reviews received from different people.
 
-## Public profile location
-- Open `/u/creator` from a normal visitor network.
-- No creator-configured/static location is used in the profile hero/About section.
-- Current viewer city/country is shown when Vercel/IP resolution succeeds.
-- Visitor stat chip uses the same detected city.
-- VPN/mobile network can legitimately change the displayed city; UI labels it as approximate/current-viewer location.
-- When city lookup fails, friendly `Location unavailable` copy is shown instead of a fake creator location.
+## 3. Admin verification
+- Open `/admin/reviews`.
+- Pending count includes the Creator-submitted review.
+- Source chip says `Creator submitted`.
+- Click Verify.
+- Success message says `Review verified and published.`
+- Status becomes VERIFIED/PUBLISHED.
+- Refresh page; verified state remains.
+- Move review back to Pending; it disappears from public page.
+- Verify again; it reappears publicly.
+- Reject hides it publicly.
+- Delete removes it permanently.
 
-## Like behavior
-- Public profile headline likes use `profiles.profile_likes_count`.
-- Each media tile uses its own `media.likes_count`.
-- Anonymous/user visitor can still like/unlike eligible media.
-- Media count changes by ±1 when visitor toggles like.
-- Profile-level likes also changes by ±1 when visitor toggles media like.
-- Creator's manual profile/media adjustments persist.
+## 4. Public review presentation
+- Open `/u/creator` while logged out.
+- Open Reviews tab.
+- Only PUBLISHED reviews are visible.
+- Published review label says `Verified review`.
+- Text `Verified demo review` is not present.
+- Reviewer avatar shows uploaded image or default avatar.
+- Rating stars and review text render correctly.
 
-## Regression
-- Public profile still opens anonymously with no login wall.
-- Review auth-on-demand still works.
-- Exclusive-content auth/unlock demo still works.
-- Admin pages still load.
-- Visitor Intelligence still groups one visitor key/IP into one top-level row.
-- Phone/email visibility settings still work.
-- Mobile dashboard and public profile have no major overlap/overflow.
+## 5. Visitor review regression
+- Logged-out Visitor can read published reviews.
+- Click Write a review; authentication appears only then.
+- After Visitor login/registration, review form works.
+- Visitor review is saved as PENDING.
+- Admin can Verify it.
+- One active Visitor review per Visitor + ES remains enforced.
 
-## Security / deployment
-- No environment secrets are included in the ZIP.
-- Run `supabase/update-v6-studio-polish.sql` before deploying code that selects `profile_likes_count`.
-- Vercel build completes successfully after push.
+## 6. Review image upload
+- CREATOR can upload review avatar.
+- SUPER_ADMIN can upload review avatar.
+- VISITOR can upload review avatar.
+- Unsupported/failed upload shows an error.
+- No image uses `/demo/reviewers/default-reviewer.svg`.
+
+## 7. Security
+- Creator can submit reviews only for own creator ID.
+- Creator cannot mark own review PUBLISHED through POST payload manipulation.
+- Only SUPER_ADMIN can call the moderation PATCH endpoint.
+- Direct authenticated DB write permission was not added for review status verification.
+- Public API returns published reviews only.
+
+## 8. V6 regression
+- Content upload preview/progress works.
+- Cover/avatar upload works.
+- Profile/media like edit works.
+- Public visitor location still uses current viewer network/IP approximation.
+- Visitor Intelligence still works.
