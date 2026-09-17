@@ -4,13 +4,14 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
-  BadgeCheck, ChevronRight, Heart, Images, LockKeyhole, Mail, MapPin, MessageSquareText,
+  BadgeCheck, ChevronRight, Heart, Images, LockKeyhole, Mail, MapPin, MessageCircle, MessageSquareText,
   Phone, Play, Share2, ShieldCheck, Sparkles, Star, Unlock, Video, X
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-browser";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 import { PublicProfileSkeleton } from "@/components/Skeletons";
 import PrivateAccessModal from "@/components/PrivateAccessModal";
+import GuestChatPanel from "@/components/GuestChatPanel";
 
 type Media = {
   id: string; type: "PHOTO" | "VIDEO"; visibility: "PUBLIC" | "LOCKED"; title: string | null;
@@ -62,6 +63,7 @@ export default function PublicProfilePage() {
   const [reviewBusy, setReviewBusy] = useState(false);
   const [reviewError, setReviewError] = useState("");
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -231,9 +233,10 @@ export default function PublicProfilePage() {
             <span className="profile-handle">@{p.username}</span>
             <p className="profile-headline">{p.headline || "Independent companion • Private gallery • Discreet connection"}</p>
             <div className="profile-mood-tags-v8"><span>Discreet</span><span>Refined</span><span>Private</span></div>
-            <span className="profile-location auto-location-v6"><MapPin size={14}/>{visitorContext?.city ? `${visitorContext.city}${visitorContext.country ? `, ${visitorContext.country}` : ""}` : visitorContext ? "Location unavailable" : "Detecting your area…"}<i className="mini-live-dot"/></span>
+            <span className="profile-location desktop-viewer-location-v10"><MapPin size={14}/>{visitorContext?.city ? `Approx. ${visitorContext.city}${visitorContext.country ? `, ${visitorContext.country}` : ""}` : visitorContext ? "Location unavailable" : "Detecting your area…"}</span>
           </div>
           <div className="profile-contact-actions">
+            <button className="contact-action chat" onClick={() => setChatOpen(true)}><MessageCircle size={17}/><span>Chat</span></button>
             {p.public_phone && <a className="contact-action call" href={`tel:${p.public_phone.replace(/[^+\d]/g, "")}`} onClick={() => track("CONTACT_PHONE_CLICK")}><Phone size={17}/><span>Direct call</span></a>}
             {p.public_email && <a className="contact-action" href={`mailto:${p.public_email}`} onClick={() => track("CONTACT_EMAIL_CLICK")}><Mail size={17}/><span>Private email</span></a>}
             <button className="contact-action" onClick={shareProfile}><Share2 size={17}/><span>Share</span></button>
@@ -243,11 +246,10 @@ export default function PublicProfilePage() {
           <span><Heart size={16}/><b>{totalLikes}</b><em>admirers</em></span>
           <span><Images size={16}/><b>{photoCount}</b><em>photos</em></span>
           <span><Video size={16}/><b>{videoCount}</b><em>videos</em></span>
-          {visitorContext?.city && <span className="visitor-location-stat" title="Your approximate location based on network/IP"><MapPin size={16}/><b>{visitorContext.city}</b><em>your location •</em><i className="mini-live-dot"/></span>}
-          <span><Star size={16}/><b>{averageRating ? averageRating.toFixed(1) : "New"}</b><em>{data.reviews.length} reviews</em></span>
+          <span className="rating-stat"><Star size={16}/><b>{averageRating ? averageRating.toFixed(1) : "New"}</b><em>{data.reviews.length} reviews</em></span>
           <span className="trust-stat"><ShieldCheck size={16}/><b>Discreet</b><em>private profile</em></span>
         </div>
-        {visitorContext?.city && <div className="mobile-location-row-v9"><MapPin size={15}/><div><strong>{visitorContext.city}{visitorContext.country ? `, ${visitorContext.country}` : ""}</strong><span>Your approximate location</span></div><i className="mini-live-dot"/></div>}
+        <div className="viewer-location-chip-v10"><MapPin size={15}/><span>{visitorContext?.city ? `Approx. ${visitorContext.city}${visitorContext.country ? `, ${visitorContext.country}` : ""}` : visitorContext ? "Approx. location unavailable" : "Detecting approximate location…"}</span></div>
       </section>
 
       {notice && <div className="profile-toast" onClick={() => setNotice("")}>{notice}<X size={14}/></div>}
@@ -304,6 +306,8 @@ export default function PublicProfilePage() {
     </section></div>}
 
     {reviewOpen && <div className="modal-backdrop" onMouseDown={() => setReviewOpen(false)}><section className="gate-modal review-modal" onMouseDown={e => e.stopPropagation()}><button className="modal-close" onClick={() => setReviewOpen(false)}><X/></button><span className="section-kicker">CLIENT REVIEW</span><h2>Share your experience</h2><p>Your review stays private until an Admin verifies it for publication.</p><form className="modal-form" onSubmit={submitReview}><div className="two-fields"><label>First name<input name="reviewer_first_name" required maxLength={60}/></label><label>Last name<input name="reviewer_last_name" required maxLength={60}/></label></div><label>Profile image <small>Optional</small><input name="reviewer_avatar" type="file" accept="image/*"/></label><label>Rating<select name="rating" defaultValue="5">{[5,4,3,2,1].map(n => <option value={n} key={n}>{"★".repeat(n)} {n} star{n > 1 ? "s" : ""}</option>)}</select></label><label>Review<textarea name="review_text" required minLength={10} maxLength={1200} rows={5} placeholder="Share a clear, respectful experience…"/></label>{reviewError && <div className="alert error">{reviewError}</div>}<button className="btn premium-cta wide" disabled={reviewBusy}>{reviewBusy ? "Submitting…" : "Submit for verification"}</button></form></section></div>}
+
+    <GuestChatPanel creatorId={p.id} displayName={p.display_name} phone={p.public_phone} open={chatOpen} onClose={() => setChatOpen(false)}/>
 
     {checkoutOpen && <PrivateAccessModal creatorId={p.id} displayName={p.display_name} priceLabel={currency(p.exclusive_price, p.exclusive_currency)} btcAddress={p.btc_address} contactPhone={p.payment_contact_phone || p.public_phone} instructions={p.payment_instructions} onClose={() => setCheckoutOpen(false)} onUnlocked={async () => { setCheckoutOpen(false); setNotice("Private gallery unlocked temporarily on this browser."); await load(); }}/>}
 

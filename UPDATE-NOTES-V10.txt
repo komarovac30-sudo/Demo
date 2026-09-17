@@ -1,0 +1,35 @@
+VELOURA V10 UPDATE NOTES
+
+PUBLIC PROFILE
+- Removed the broken mobile location stat and green dot.
+- Mobile profile now keeps only Admirers, Photos and Videos in the compact stat row.
+- Approximate IP/network city is shown in a separate location chip below the stats.
+- Added "Chat" action to the public profile.
+
+TEMPORARY CHAT
+- Anonymous visitor identity is a random browser token stored locally.
+- Guest tokens are SHA-256 hashed before being stored in Supabase.
+- Text only; max message length 1,000 characters.
+- Visitor polling interval: 8 seconds.
+- Creator polling: 8–10 seconds.
+- Basic visitor rate limit: max 6 messages/minute per conversation.
+- Creator can block/unblock a guest thread.
+- If the creator has a public phone number, visitor can Continue by Text using the device's native SMS app.
+
+DATA RETENTION
+- chat_messages.expires_at defaults to 24 hours after creation.
+- APIs exclude expired rows immediately.
+- Database cleanup function deletes expired messages.
+- Supabase pg_cron runs cleanup every 10 minutes.
+- Empty threads older than 24 hours are removed.
+
+DATABASE
+New tables:
+- chat_threads
+- chat_messages
+
+New function:
+- cleanup_expired_chats()
+
+New migration:
+- supabase/migrations/20260917000200_v10_guest_chat.sql

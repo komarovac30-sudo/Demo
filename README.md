@@ -204,3 +204,7 @@ If V7 is already installed, **no database migration is required**. To refresh th
 ```
 
 The V8 seed is intentionally synthetic. It does not copy real providers, real contact details, or real third-party review text. See `UX-RESEARCH-V8.md` for the public UX patterns used as inspiration.
+
+## V10 — Free Temporary Guest Chat
+
+V10 adds a zero-paid-service chat bridge using the existing Next.js + Supabase stack. Visitors do not need to log in. The browser holds a random guest token, the server stores only its SHA-256 hash, and the UI polls every few seconds instead of requiring a third-party realtime service. Chat is text-only and temporary: messages expire after 24 hours and are cleaned by Supabase Cron. Creators reply from `/dashboard/messages`, can block/unblock a guest, and visitors can move the conversation to their native SMS app using **Continue by Text** when a public phone number exists.

@@ -1,0 +1,41 @@
+VELOURA V10 — FREE TEMPORARY CHAT + MOBILE LOCATION FIX
+
+WHAT IS NEW
+1. Mobile location layout is simplified:
+   Admirers | Photos | Videos
+   [ Approx. City, Country ]
+   No green status dot and no location inside the stat grid.
+
+2. Free guest web chat:
+   - No visitor login required.
+   - Text-only chat.
+   - Simple 8-second polling instead of a paid realtime service.
+   - Creator replies from ES Studio > Messages.
+   - Continue by Text opens the visitor's native SMS app when the ES has a public phone number.
+   - Creator can block/unblock a temporary visitor chat.
+
+3. 24-hour retention:
+   - Every message receives an expires_at timestamp 24 hours after it is sent.
+   - Expired messages are never returned by the API.
+   - Supabase pg_cron cleanup runs every 10 minutes and physically deletes expired messages.
+   - Old empty chat threads are also removed.
+
+DATABASE DEPLOYMENT
+If the GitHub repository already contains these Actions secrets:
+- SUPABASE_ACCESS_TOKEN
+- SUPABASE_DB_PASSWORD
+- SUPABASE_PROJECT_REF
+
+then simply push V10 to main. GitHub Actions will automatically apply:
+  supabase/migrations/20260917000200_v10_guest_chat.sql
+
+You do NOT need to paste the V10 SQL manually in that case.
+
+FALLBACK
+If automated migration does not run, use:
+  supabase/update-v10-guest-chat.sql
+in Supabase SQL Editor once.
+
+IMPORTANT
+No paid chat provider, SMS provider, or realtime provider is used.
+The website does not send SMS. "Continue by Text" only opens the visitor's phone Messages app.

@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import Link from "next/link";
 import {
   BadgeCheck, BarChart3, Check, ChevronRight, Eye, FileImage, Heart, ImagePlus, Images, LockKeyhole, LogOut, Mail,
-  Pencil, Phone, RotateCcw, Save, ShieldCheck, Sparkles, Star, Trash2, Unlock, Upload, Users, X
+  Pencil, Phone, RotateCcw, Save, ShieldCheck, Sparkles, Star, Trash2, Unlock, Upload, Users, X, MessageCircle
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-browser";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
@@ -171,7 +171,7 @@ export default function CreatorDashboard() {
   return <main className="dashboard-page-v5">
     <aside className="dashboard-sidebar-v5">
       <Link href="/" className="veloura-brand"><span>V</span>VELOURA</Link><div className="workspace-label">ES Studio</div>
-      <nav><a className="active" href="#home">Home</a><a href="#profile">My profile</a><a href="#post">Add to my gallery</a><a href="#library">My gallery</a><a href="#reviews">Client reviews</a><Link href="/dashboard/visitors">Profile visitors</Link><Link href="/dashboard/visitors">Advanced insights</Link></nav>
+      <nav><a className="active" href="#home">Home</a><a href="#profile">My profile</a><a href="#post">Add to my gallery</a><a href="#library">My gallery</a><a href="#reviews">Client reviews</a><Link href="/dashboard/messages"><MessageCircle size={14}/> Messages</Link><Link href="/dashboard/visitors">Profile visitors</Link><Link href="/dashboard/visitors">Advanced insights</Link></nav>
       <div className="sidebar-user-v5"><img src={profile.avatar_url||"/demo/avatar-v5.svg"} alt=""/><div><strong>{profile.display_name}</strong><span>@{profile.username}</span></div></div>
       <button className="sidebar-logout" onClick={logout}><LogOut size={17}/> Log out</button>
     </aside>
