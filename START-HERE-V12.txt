@@ -1,0 +1,23 @@
+VELOURA V12 — PRIVATE CHAT REFINEMENT
+
+WHAT CHANGED
+1. ES message composer stays visible after receiving large payment-proof photos.
+2. Chat wording is simplified to “Private Chat”.
+3. The security/24-hour retention notice is shown only the first time per browser.
+4. Security copy is accurate: chat traffic is protected in transit; web messages and proof photos are deleted after 24 hours. V12 does NOT claim end-to-end encryption.
+5. ES Studio > Messages now has a Visitor message mode control:
+   - Web Chat: visitors can send web messages + proof photos.
+   - Force Text: visitor Send opens the phone’s native Messages app with their typed text prefilled.
+6. In Force Text mode, the visitor draft is kept locally in that browser; it is not stored as a new web-chat message.
+7. Existing web conversation history remains visible until its normal 24-hour expiry.
+
+DATABASE
+V12 adds profiles.chat_force_sms_only through:
+  supabase/migrations/20260917000400_v12_chat_refinement.sql
+
+If GitHub Supabase migration automation is green, do not run SQL manually.
+Fallback SQL:
+  supabase/update-v12-chat-refinement.sql
+
+IMPORTANT SMS LIMITATION
+Browsers/phones can open the native SMS composer and prefill text, but a website cannot press Send on the user's behalf. The visitor must review and send the SMS in their Messages app.

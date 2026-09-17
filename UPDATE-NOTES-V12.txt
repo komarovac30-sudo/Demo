@@ -1,0 +1,26 @@
+VELOURA V12 UPDATE NOTES
+
+CHAT COMPOSER FIX
+- Creator chat panel now uses a constrained flex layout.
+- Message history scrolls independently.
+- Reply composer remains anchored/visible even after large photo messages.
+- Proof images have a smaller maximum display height in Creator Studio.
+
+PROFESSIONAL CHAT COPY
+- “Simple private web chat …” -> “Private Chat”.
+- Removed the always-visible temporary-chat/retention banner.
+- First-time-only security notice:
+  “Security is a priority. Chat traffic is protected in transit, and web messages plus payment-proof photos are automatically deleted after 24 hours.”
+- We intentionally do not claim end-to-end encryption because V12 does not implement client-side E2EE.
+
+FORCE TEXT MODE
+- New ES Studio > Messages setting.
+- Web Chat = existing V11 behavior.
+- Force Text = visitor types in Veloura, presses Send, and the native mobile Messages app opens with that text prefilled.
+- The website cannot auto-send SMS due to browser/OS security rules.
+- On desktop, Veloura copies the typed text and shows the configured phone number instead.
+- Photo upload is hidden in Force Text mode.
+- Visitor SMS draft is kept in browser localStorage for convenience.
+
+DATABASE
+- Adds profiles.chat_force_sms_only boolean default false.

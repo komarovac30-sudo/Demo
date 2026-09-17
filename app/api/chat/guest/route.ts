@@ -19,12 +19,12 @@ function readGuestToken(req: NextRequest) {
 
 async function ensureThread(creatorId: string, guestToken: string) {
   const admin = serviceSupabase();
-  const { data: creator } = await admin.from("profiles").select("id,is_active,role").eq("id", creatorId).eq("role", "CREATOR").eq("is_active", true).maybeSingle();
+  const { data: creator } = await admin.from("profiles").select("id,is_active,role,chat_force_sms_only").eq("id", creatorId).eq("role", "CREATOR").eq("is_active", true).maybeSingle();
   if (!creator) return { error: "Profile not available.", status: 404 as const };
 
   const guestHash = hashGuestToken(guestToken);
   const { data: existing } = await admin.from("chat_threads").select("id,creator_id,guest_label,status,created_at,last_activity_at").eq("creator_id", creatorId).eq("guest_key_hash", guestHash).maybeSingle();
-  if (existing) return { admin, thread: existing };
+  if (existing) return { admin, thread: existing, forceSmsOnly: Boolean(creator.chat_force_sms_only) };
 
   const { data: created, error } = await admin.from("chat_threads").insert({
     creator_id: creatorId,
@@ -32,7 +32,7 @@ async function ensureThread(creatorId: string, guestToken: string) {
     guest_label: guestLabelFromHash(guestHash),
   }).select("id,creator_id,guest_label,status,created_at,last_activity_at").single();
   if (error || !created) return { error: "Unable to start chat.", status: 500 as const };
-  return { admin, thread: created };
+  return { admin, thread: created, forceSmsOnly: Boolean(creator.chat_force_sms_only) };
 }
 
 export async function GET(req: NextRequest) {
@@ -100,8 +100,9 @@ export async function POST(req: NextRequest) {
 
     const result = await ensureThread(creatorId, guestToken);
     if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
-    const { admin, thread } = result;
+    const { admin, thread, forceSmsOnly } = result;
     await cleanupExpiredChatData(admin);
+    if (forceSmsOnly) return NextResponse.json({ error: "This profile currently accepts visitor messages through mobile text only." }, { status: 409 });
     if (thread.status === "BLOCKED") return NextResponse.json({ error: "Chat is unavailable for this visitor." }, { status: 403 });
 
     const oneMinuteAgo = new Date(Date.now() - 60_000).toISOString();

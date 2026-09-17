@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Ban, ChevronLeft, LogOut, MessageCircle, RefreshCw, Send, ShieldCheck, UnlockKeyhole } from "lucide-react";
+import { Ban, ChevronLeft, LogOut, MessageCircle, Phone, RefreshCw, Send, ShieldCheck, UnlockKeyhole } from "lucide-react";
 import { supabase } from "@/lib/supabase-browser";
 
 type Profile = { id: string; username: string; display_name: string; avatar_url: string | null };
@@ -35,6 +35,9 @@ export default function CreatorMessagesPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [threadStatus, setThreadStatus] = useState<"ACTIVE" | "BLOCKED">("ACTIVE");
   const [busy, setBusy] = useState(false);
+  const [settingsBusy, setSettingsBusy] = useState(false);
+  const [forceSmsOnly, setForceSmsOnly] = useState(false);
+  const [showSecurityNotice, setShowSecurityNotice] = useState(false);
   const [error, setError] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -71,6 +74,38 @@ export default function CreatorMessagesPage() {
     } catch (err) { if (!silent) setError(err instanceof Error ? err.message : "Unable to load conversation."); }
   }, [authHeaders]);
 
+  const loadChatSettings = useCallback(async () => {
+    try {
+      const headers = await authHeaders();
+      if (!headers) return;
+      const res = await fetch("/api/creator/chat-settings", { headers, cache: "no-store" });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || "Unable to load chat settings.");
+      setForceSmsOnly(Boolean(body.force_sms_only));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load chat settings.");
+    }
+  }, [authHeaders]);
+
+  const updateChatMode = useCallback(async (next: boolean) => {
+    if (next === forceSmsOnly || settingsBusy) return;
+    setSettingsBusy(true); setError("");
+    try {
+      const headers = await authHeaders();
+      if (!headers) throw new Error("Please sign in again.");
+      const res = await fetch("/api/creator/chat-settings", {
+        method: "PATCH",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ force_sms_only: next }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || "Unable to update chat mode.");
+      setForceSmsOnly(Boolean(body.force_sms_only));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to update chat mode.");
+    } finally { setSettingsBusy(false); }
+  }, [authHeaders, forceSmsOnly, settingsBusy]);
+
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -79,8 +114,15 @@ export default function CreatorMessagesPage() {
       if (data?.role === "CREATOR") setProfile(data as Profile);
       setReady(true);
     })();
+
+    const key = "veloura_creator_chat_security_seen_v12";
+    if (!window.localStorage.getItem(key)) {
+      setShowSecurityNotice(true);
+      window.localStorage.setItem(key, "1");
+    }
   }, []);
-  useEffect(() => { if (profile) loadThreads(); }, [profile, loadThreads]);
+
+  useEffect(() => { if (profile) { loadThreads(); loadChatSettings(); } }, [profile, loadThreads, loadChatSettings]);
   useEffect(() => { if (selected) loadThread(selected); }, [selected, loadThread]);
   useEffect(() => {
     if (!profile) return;
@@ -113,7 +155,7 @@ export default function CreatorMessagesPage() {
   async function toggleBlock() {
     if (!selected) return;
     const next = threadStatus === "BLOCKED" ? "ACTIVE" : "BLOCKED";
-    if (next === "BLOCKED" && !confirm("Block this temporary visitor chat? They will no longer be able to send messages.")) return;
+    if (next === "BLOCKED" && !confirm("Block this visitor chat? They will no longer be able to send web messages.")) return;
     setBusy(true); setError("");
     try {
       const headers = await authHeaders(); if (!headers) throw new Error("Please sign in again.");
@@ -139,9 +181,25 @@ export default function CreatorMessagesPage() {
     </aside>
 
     <section className="dashboard-content-v5 chat-workspace-v10">
-      <header className="workspace-header-v5"><div><span className="workspace-kicker"><MessageCircle size={14}/> TEMPORARY MESSAGES</span><h1>Messages</h1><p>A lightweight bridge to direct mobile messaging. Web messages and payment-proof photos automatically disappear after 24 hours.</p></div><button className="btn secondary" onClick={() => { loadThreads(); if (selected) loadThread(selected); }}><RefreshCw size={16}/> Refresh</button></header>
+      <header className="workspace-header-v5 chat-workspace-header-v12">
+        <div><span className="workspace-kicker"><MessageCircle size={14}/> PRIVATE CHAT</span><h1>Messages</h1><p>Short private conversations, payment proof, and an optional handoff to normal mobile text.</p></div>
+        <div className="chat-header-actions-v12">
+          <div className="chat-mode-control-v12" role="radiogroup" aria-label="Visitor chat mode">
+            <span>Visitor message mode</span>
+            <div>
+              <button type="button" role="radio" aria-checked={!forceSmsOnly} className={!forceSmsOnly ? "active" : ""} disabled={settingsBusy} onClick={() => updateChatMode(false)}><MessageCircle size={13}/> Web Chat</button>
+              <button type="button" role="radio" aria-checked={forceSmsOnly} className={forceSmsOnly ? "active" : ""} disabled={settingsBusy} onClick={() => updateChatMode(true)}><Phone size={13}/> Force Text</button>
+            </div>
+            <small>{forceSmsOnly ? "Visitor Send opens their phone’s Messages app with the typed text prefilled. It is not stored as a new web message." : "Visitors can send web messages and payment-proof photos here."}</small>
+          </div>
+          <button className="btn secondary" onClick={() => { loadThreads(); if (selected) loadThread(selected); }}><RefreshCw size={16}/> Refresh</button>
+        </div>
+      </header>
+
+      {showSecurityNotice && <div className="chat-security-banner-v12"><ShieldCheck size={16}/><div><strong>Security is a priority.</strong><span>Chat traffic is protected in transit, and web messages plus payment-proof photos are automatically deleted after 24 hours.</span></div></div>}
       {error && <div className="alert error">{error}</div>}
-      <div className="chat-studio-grid-v10">
+
+      <div className="chat-studio-grid-v10 chat-studio-grid-v12">
         <aside className="chat-thread-list-v10">
           <div className="chat-thread-title-v10"><strong>Conversations</strong><span>{threads.length} active/recent</span></div>
           {threads.length === 0 ? <div className="chat-studio-empty-v10"><MessageCircle/><strong>No messages yet</strong><span>New visitor chats will appear here automatically.</span></div> : threads.map(t => <button key={t.id} className={selected === t.id ? "active" : ""} onClick={() => setSelected(t.id)}>
@@ -152,14 +210,13 @@ export default function CreatorMessagesPage() {
           </button>)}
         </aside>
 
-        <section className="creator-chat-panel-v10">
-          {!activeThread ? <div className="chat-studio-empty-v10 large"><MessageCircle/><strong>Select a conversation</strong><span>Temporary messages are shown here.</span></div> : <>
-            <header><div><button className="chat-mobile-back-v10" onClick={() => setSelected("")}><ChevronLeft/></button><span className="thread-avatar-v10">{activeThread.guest_label.replace("Guest ", "").slice(0, 2)}</span><div><strong>{activeThread.guest_label}</strong><span>Temporary visitor • messages expire after 24h</span></div></div><button className={`chat-block-btn-v10 ${threadStatus === "BLOCKED" ? "unblock" : ""}`} onClick={toggleBlock} disabled={busy}>{threadStatus === "BLOCKED" ? <><UnlockKeyhole size={14}/> Unblock</> : <><Ban size={14}/> Block</>}</button></header>
-            <div className="chat-retention-note-v10 studio"><ShieldCheck size={14}/><span>No permanent archive: each web message and attached payment-proof photo expires after 24 hours.</span></div>
+        <section className="creator-chat-panel-v10 creator-chat-panel-v12">
+          {!activeThread ? <div className="chat-studio-empty-v10 large"><MessageCircle/><strong>Select a conversation</strong><span>Private visitor conversations are shown here.</span></div> : <>
+            <header><div><button className="chat-mobile-back-v10" onClick={() => setSelected("")}><ChevronLeft/></button><span className="thread-avatar-v10">{activeThread.guest_label.replace("Guest ", "").slice(0, 2)}</span><div><strong>{activeThread.guest_label}</strong><span>Private visitor conversation</span></div></div><button className={`chat-block-btn-v10 ${threadStatus === "BLOCKED" ? "unblock" : ""}`} onClick={toggleBlock} disabled={busy}>{threadStatus === "BLOCKED" ? <><UnlockKeyhole size={14}/> Unblock</> : <><Ban size={14}/> Block</>}</button></header>
             <div className="creator-chat-messages-v10" ref={listRef}>
-              {messages.length === 0 ? <div className="chat-studio-empty-v10"><MessageCircle/><strong>No recent messages</strong><span>Older messages may already have expired.</span></div> : messages.map(m => <article key={m.id} className={`chat-bubble-v10 ${m.sender_type === "CREATOR" ? "mine" : "theirs"}`}>{m.attachment_url && <a className="chat-photo-v11" href={m.attachment_url} target="_blank" rel="noreferrer"><img src={m.attachment_url} alt={m.attachment_name || "Payment proof"}/></a>}{!(m.attachment_url && m.message === "Photo") && <p>{m.message}</p>}<time>{clock(m.created_at)}</time></article>)}
+              {messages.length === 0 ? <div className="chat-studio-empty-v10"><MessageCircle/><strong>No recent messages</strong><span>Older web messages may already have expired.</span></div> : messages.map(m => <article key={m.id} className={`chat-bubble-v10 ${m.sender_type === "CREATOR" ? "mine" : "theirs"}`}>{m.attachment_url && <a className="chat-photo-v11" href={m.attachment_url} target="_blank" rel="noreferrer"><img src={m.attachment_url} alt={m.attachment_name || "Payment proof"}/></a>}{!(m.attachment_url && m.message === "Photo") && <p>{m.message}</p>}<time>{clock(m.created_at)}</time></article>)}
             </div>
-            {threadStatus === "BLOCKED" ? <div className="chat-blocked-v10 creator">This visitor is blocked. Unblock them to continue chatting.</div> : <form className="chat-compose-v10 creator" onSubmit={send}><input name="message" maxLength={1000} autoComplete="off" placeholder={`Reply to ${activeThread.guest_label}…`}/><button disabled={busy}><Send size={17}/></button></form>}
+            {threadStatus === "BLOCKED" ? <div className="chat-blocked-v10 creator">This visitor is blocked. Unblock them to continue chatting.</div> : <form className="chat-compose-v10 creator chat-compose-creator-v12" onSubmit={send}><input name="message" maxLength={1000} autoComplete="off" placeholder={`Reply to ${activeThread.guest_label}…`}/><button disabled={busy} aria-label="Send reply"><Send size={17}/></button></form>}
           </>}
         </section>
       </div>

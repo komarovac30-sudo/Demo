@@ -8,7 +8,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ usernam
   const admin = serviceSupabase();
   const { data: profile } = await admin
     .from("profiles")
-    .select("id,username,display_name,bio,headline,avatar_url,cover_url,role,is_active,is_verified,public_phone,public_email,phone_visible,email_visible,exclusive_price,exclusive_currency,profile_likes_count")
+    .select("id,username,display_name,bio,headline,avatar_url,cover_url,role,is_active,is_verified,public_phone,public_email,phone_visible,email_visible,exclusive_price,exclusive_currency,profile_likes_count,chat_force_sms_only")
     .eq("username", username)
     .eq("role", "CREATOR")
     .eq("is_active", true)
@@ -87,6 +87,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ usernam
       payment_contact_phone: paymentSettings?.contact_phone || (profile.phone_visible ? profile.public_phone : null),
       payment_instructions: paymentSettings?.instructions || null,
       unlock_code_configured: Boolean(paymentSettings?.unlock_code_updated_at),
+      chat_force_sms_only: Boolean(profile.chat_force_sms_only),
     },
     media: safeMedia,
     reviews: reviews || [],

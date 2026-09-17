@@ -208,3 +208,11 @@ The V8 seed is intentionally synthetic. It does not copy real providers, real co
 ## V10 — Free Temporary Guest Chat
 
 V10 adds a zero-paid-service chat bridge using the existing Next.js + Supabase stack. Visitors do not need to log in. The browser holds a random guest token, the server stores only its SHA-256 hash, and the UI polls every few seconds instead of requiring a third-party realtime service. Chat is text-only and temporary: messages expire after 24 hours and are cleaned by Supabase Cron. Creators reply from `/dashboard/messages`, can block/unblock a guest, and visitors can move the conversation to their native SMS app using **Continue by Text** when a public phone number exists.
+
+## V12 — Private Chat refinement
+
+V12 keeps the free V11 temporary-chat model but improves its layout and handoff behavior. The Creator Studio composer is constrained to remain visible even when a conversation contains large payment-proof images. Visitor and Creator chat UI now use the shorter **Private Chat** wording, and the 24-hour security notice is shown only once per browser instead of permanently occupying conversation space.
+
+A creator can choose **Web Chat** or **Force Text** from `/dashboard/messages`. Web Chat keeps temporary web messages and proof-photo uploads. Force Text turns the visitor composer into a mobile SMS handoff: the visitor's typed draft is kept locally, and pressing Send opens the device's native Messages app with the ES phone number and text prefilled. Browser security prevents a website from sending the SMS automatically, so the visitor still taps Send in the native app.
+
+V12 intentionally does **not** call the chat end-to-end encrypted. Traffic is protected by the site's HTTPS transport, while messages/proof photos continue to use the existing automatic 24-hour deletion model.
