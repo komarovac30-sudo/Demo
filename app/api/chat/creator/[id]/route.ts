@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cleanChatMessage } from "@/lib/chat";
+import { addSignedAttachmentUrls, cleanupExpiredChatData, type ChatMessageWithAttachment } from "@/lib/chat-attachments";
 import { serviceSupabase, verifyRole } from "@/lib/supabase-service";
 
 async function creatorThread(req: NextRequest, id: string) {
@@ -17,15 +18,15 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
   const result = await creatorThread(req, id);
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
   const { admin, thread } = result;
-  await admin.rpc("cleanup_expired_chats");
+  await cleanupExpiredChatData(admin);
   const { data: messages, error } = await admin.from("chat_messages")
-    .select("id,sender_type,message,created_at,expires_at")
+    .select("id,sender_type,message,created_at,expires_at,attachment_path,attachment_name,attachment_mime,attachment_size")
     .eq("thread_id", thread.id)
     .gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: true })
     .limit(100);
   if (error) return NextResponse.json({ error: "Unable to load messages." }, { status: 500 });
-  return NextResponse.json({ thread, messages: messages || [], retention_hours: 24 });
+  return NextResponse.json({ thread, messages: await addSignedAttachmentUrls(admin, (messages || []) as ChatMessageWithAttachment[]), retention_hours: 24 });
 }
 
 export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
   if (!message) return NextResponse.json({ error: "Write a message first." }, { status: 400 });
 
   const { data: created, error } = await admin.from("chat_messages").insert({ thread_id: thread.id, sender_type: "CREATOR", message })
-    .select("id,sender_type,message,created_at,expires_at").single();
+    .select("id,sender_type,message,created_at,expires_at,attachment_path,attachment_name,attachment_mime,attachment_size").single();
   if (error || !created) return NextResponse.json({ error: "Unable to send message." }, { status: 500 });
   await admin.from("chat_threads").update({ last_activity_at: new Date().toISOString() }).eq("id", thread.id);
   return NextResponse.json({ message: created });

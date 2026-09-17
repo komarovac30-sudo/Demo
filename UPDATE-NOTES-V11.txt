@@ -1,0 +1,29 @@
+VELOURA V11 UPDATE NOTES
+========================
+
+PUBLIC / MOBILE
+- Added dedicated mobile Chat CTA below the profile hero.
+- Kept the simplified mobile location row: Admirers / Photos / Videos, then approximate visitor location.
+- Removed dependence on the cramped hero action row for mobile chat discovery.
+
+PRIVATE GALLERY PAYMENT
+- Payment contact actions are now arranged as:
+    [ Text ] [ Copy ]
+         [ Chat ]
+- Chat from the payment modal closes the payment modal and opens web chat.
+- A payment-related message is pre-filled for the visitor.
+
+TEMPORARY CHAT
+- Visitor can send text or one payment-proof photo per message.
+- Supported: JPG, PNG, WebP.
+- Max photo size: 4 MB.
+- Selected photo preview + remove option before send.
+- Creator can view the attached proof from ES Studio > Messages.
+- Storage bucket is private; API issues signed URLs only after chat authorization.
+- Existing 24-hour expiry remains. Expired attachment rows are hidden immediately; private storage cleanup runs opportunistically through chat API activity while text cleanup remains scheduled in Postgres.
+
+DATABASE
+- New migration: 20260917000300_v11_chat_payment_proof.sql
+- Adds attachment metadata to chat_messages.
+- Creates/updates private chat-attachments bucket.
+- Updates cleanup_expired_chats so Storage files are not orphaned by direct SQL deletion.

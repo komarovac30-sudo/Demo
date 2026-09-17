@@ -10,7 +10,7 @@ type Thread = {
   id: string; guest_label: string; status: "ACTIVE" | "BLOCKED"; created_at: string; last_activity_at: string;
   last_message: { message: string; created_at: string; sender_type: "VISITOR" | "CREATOR" } | null;
 };
-type Message = { id: number; sender_type: "VISITOR" | "CREATOR"; message: string; created_at: string; expires_at: string };
+type Message = { id: number; sender_type: "VISITOR" | "CREATOR"; message: string; created_at: string; expires_at: string; attachment_url?: string | null; attachment_name?: string | null; attachment_mime?: string | null; attachment_size?: number | null };
 
 function relativeTime(value?: string | null) {
   if (!value) return "";
@@ -139,7 +139,7 @@ export default function CreatorMessagesPage() {
     </aside>
 
     <section className="dashboard-content-v5 chat-workspace-v10">
-      <header className="workspace-header-v5"><div><span className="workspace-kicker"><MessageCircle size={14}/> TEMPORARY MESSAGES</span><h1>Messages</h1><p>A lightweight bridge to direct mobile messaging. Web messages automatically disappear after 24 hours.</p></div><button className="btn secondary" onClick={() => { loadThreads(); if (selected) loadThread(selected); }}><RefreshCw size={16}/> Refresh</button></header>
+      <header className="workspace-header-v5"><div><span className="workspace-kicker"><MessageCircle size={14}/> TEMPORARY MESSAGES</span><h1>Messages</h1><p>A lightweight bridge to direct mobile messaging. Web messages and payment-proof photos automatically disappear after 24 hours.</p></div><button className="btn secondary" onClick={() => { loadThreads(); if (selected) loadThread(selected); }}><RefreshCw size={16}/> Refresh</button></header>
       {error && <div className="alert error">{error}</div>}
       <div className="chat-studio-grid-v10">
         <aside className="chat-thread-list-v10">
@@ -155,9 +155,9 @@ export default function CreatorMessagesPage() {
         <section className="creator-chat-panel-v10">
           {!activeThread ? <div className="chat-studio-empty-v10 large"><MessageCircle/><strong>Select a conversation</strong><span>Temporary messages are shown here.</span></div> : <>
             <header><div><button className="chat-mobile-back-v10" onClick={() => setSelected("")}><ChevronLeft/></button><span className="thread-avatar-v10">{activeThread.guest_label.replace("Guest ", "").slice(0, 2)}</span><div><strong>{activeThread.guest_label}</strong><span>Temporary visitor • messages expire after 24h</span></div></div><button className={`chat-block-btn-v10 ${threadStatus === "BLOCKED" ? "unblock" : ""}`} onClick={toggleBlock} disabled={busy}>{threadStatus === "BLOCKED" ? <><UnlockKeyhole size={14}/> Unblock</> : <><Ban size={14}/> Block</>}</button></header>
-            <div className="chat-retention-note-v10 studio"><ShieldCheck size={14}/><span>No permanent archive: each web message is automatically deleted 24 hours after it is sent.</span></div>
+            <div className="chat-retention-note-v10 studio"><ShieldCheck size={14}/><span>No permanent archive: each web message and attached payment-proof photo expires after 24 hours.</span></div>
             <div className="creator-chat-messages-v10" ref={listRef}>
-              {messages.length === 0 ? <div className="chat-studio-empty-v10"><MessageCircle/><strong>No recent messages</strong><span>Older messages may already have expired.</span></div> : messages.map(m => <article key={m.id} className={`chat-bubble-v10 ${m.sender_type === "CREATOR" ? "mine" : "theirs"}`}><p>{m.message}</p><time>{clock(m.created_at)}</time></article>)}
+              {messages.length === 0 ? <div className="chat-studio-empty-v10"><MessageCircle/><strong>No recent messages</strong><span>Older messages may already have expired.</span></div> : messages.map(m => <article key={m.id} className={`chat-bubble-v10 ${m.sender_type === "CREATOR" ? "mine" : "theirs"}`}>{m.attachment_url && <a className="chat-photo-v11" href={m.attachment_url} target="_blank" rel="noreferrer"><img src={m.attachment_url} alt={m.attachment_name || "Payment proof"}/></a>}{!(m.attachment_url && m.message === "Photo") && <p>{m.message}</p>}<time>{clock(m.created_at)}</time></article>)}
             </div>
             {threadStatus === "BLOCKED" ? <div className="chat-blocked-v10 creator">This visitor is blocked. Unblock them to continue chatting.</div> : <form className="chat-compose-v10 creator" onSubmit={send}><input name="message" maxLength={1000} autoComplete="off" placeholder={`Reply to ${activeThread.guest_label}…`}/><button disabled={busy}><Send size={17}/></button></form>}
           </>}

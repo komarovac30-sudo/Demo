@@ -1,6 +1,16 @@
+import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { serviceSupabase } from "@/lib/supabase-service";
 import { CHAT_RETENTION_HOURS, cleanChatMessage, guestLabelFromHash, hashGuestToken } from "@/lib/chat";
+import {
+  CHAT_ATTACHMENT_BUCKET,
+  CHAT_ATTACHMENT_MAX_BYTES,
+  CHAT_ATTACHMENT_MIMES,
+  addSignedAttachmentUrls,
+  type ChatMessageWithAttachment,
+  attachmentExtension,
+  cleanupExpiredChatData,
+} from "@/lib/chat-attachments";
 
 function readGuestToken(req: NextRequest) {
   const token = (req.headers.get("x-guest-token") || "").trim();
@@ -34,10 +44,10 @@ export async function GET(req: NextRequest) {
     const result = await ensureThread(creatorId, guestToken);
     if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
     const { admin, thread } = result;
-    await admin.rpc("cleanup_expired_chats");
+    await cleanupExpiredChatData(admin);
 
     const { data: messages, error } = await admin.from("chat_messages")
-      .select("id,sender_type,message,created_at,expires_at")
+      .select("id,sender_type,message,created_at,expires_at,attachment_path,attachment_name,attachment_mime,attachment_size")
       .eq("thread_id", thread.id)
       .gt("expires_at", new Date().toISOString())
       .order("created_at", { ascending: true })
@@ -46,7 +56,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       thread: { id: thread.id, label: thread.guest_label, status: thread.status },
-      messages: messages || [],
+      messages: await addSignedAttachmentUrls(admin, (messages || []) as ChatMessageWithAttachment[]),
       retention_hours: CHAT_RETENTION_HOURS,
     });
   } catch {
@@ -57,15 +67,41 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const guestToken = readGuestToken(req);
-    const body = await req.json();
-    const creatorId = String(body.creator_id || "").trim();
-    const message = cleanChatMessage(body.message);
-    if (!creatorId || !guestToken || !message) return NextResponse.json({ error: "Write a message first." }, { status: 400 });
+    const contentType = req.headers.get("content-type") || "";
+
+    let creatorId = "";
+    let message = "";
+    let attachment: File | null = null;
+
+    if (contentType.includes("multipart/form-data")) {
+      const form = await req.formData();
+      creatorId = String(form.get("creator_id") || "").trim();
+      message = cleanChatMessage(form.get("message"));
+      const candidate = form.get("attachment");
+      if (candidate instanceof File && candidate.size > 0) attachment = candidate;
+    } else {
+      const body = await req.json();
+      creatorId = String(body.creator_id || "").trim();
+      message = cleanChatMessage(body.message);
+    }
+
+    if (!creatorId || !guestToken || (!message && !attachment)) {
+      return NextResponse.json({ error: "Write a message or add a photo first." }, { status: 400 });
+    }
+
+    if (attachment) {
+      if (!CHAT_ATTACHMENT_MIMES.has(attachment.type)) {
+        return NextResponse.json({ error: "Use a JPG, PNG, or WebP image." }, { status: 400 });
+      }
+      if (attachment.size > CHAT_ATTACHMENT_MAX_BYTES) {
+        return NextResponse.json({ error: "Photo must be 4 MB or smaller." }, { status: 400 });
+      }
+    }
 
     const result = await ensureThread(creatorId, guestToken);
     if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
     const { admin, thread } = result;
-    await admin.rpc("cleanup_expired_chats");
+    await cleanupExpiredChatData(admin);
     if (thread.status === "BLOCKED") return NextResponse.json({ error: "Chat is unavailable for this visitor." }, { status: 403 });
 
     const oneMinuteAgo = new Date(Date.now() - 60_000).toISOString();
@@ -73,15 +109,38 @@ export async function POST(req: NextRequest) {
       .eq("thread_id", thread.id).eq("sender_type", "VISITOR").gte("created_at", oneMinuteAgo);
     if ((count || 0) >= 6) return NextResponse.json({ error: "Please wait a moment before sending another message." }, { status: 429 });
 
+    let attachmentPath: string | null = null;
+    if (attachment) {
+      const extension = attachmentExtension(attachment.type);
+      attachmentPath = `${creatorId}/${thread.id}/${randomUUID()}.${extension}`;
+      const buffer = Buffer.from(await attachment.arrayBuffer());
+      const { error: uploadError } = await admin.storage.from(CHAT_ATTACHMENT_BUCKET).upload(attachmentPath, buffer, {
+        contentType: attachment.type,
+        upsert: false,
+        cacheControl: "60",
+      });
+      if (uploadError) return NextResponse.json({ error: "Unable to upload photo." }, { status: 500 });
+    }
+
+    const messageForDb = message || "Photo";
     const { data: created, error } = await admin.from("chat_messages").insert({
       thread_id: thread.id,
       sender_type: "VISITOR",
-      message,
-    }).select("id,sender_type,message,created_at,expires_at").single();
-    if (error || !created) return NextResponse.json({ error: "Unable to send message." }, { status: 500 });
-    await admin.from("chat_threads").update({ last_activity_at: new Date().toISOString() }).eq("id", thread.id);
+      message: messageForDb,
+      attachment_path: attachmentPath,
+      attachment_name: attachment?.name || null,
+      attachment_mime: attachment?.type || null,
+      attachment_size: attachment?.size || null,
+    }).select("id,sender_type,message,created_at,expires_at,attachment_path,attachment_name,attachment_mime,attachment_size").single();
 
-    return NextResponse.json({ message: created });
+    if (error || !created) {
+      if (attachmentPath) await admin.storage.from(CHAT_ATTACHMENT_BUCKET).remove([attachmentPath]);
+      return NextResponse.json({ error: "Unable to send message." }, { status: 500 });
+    }
+
+    await admin.from("chat_threads").update({ last_activity_at: new Date().toISOString() }).eq("id", thread.id);
+    const [withUrl] = await addSignedAttachmentUrls(admin, [created] as ChatMessageWithAttachment[]);
+    return NextResponse.json({ message: withUrl });
   } catch {
     return NextResponse.json({ error: "Unable to send message." }, { status: 500 });
   }

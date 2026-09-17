@@ -64,6 +64,7 @@ export default function PublicProfilePage() {
   const [reviewError, setReviewError] = useState("");
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatDraft, setChatDraft] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -236,7 +237,7 @@ export default function PublicProfilePage() {
             <span className="profile-location desktop-viewer-location-v10"><MapPin size={14}/>{visitorContext?.city ? `Approx. ${visitorContext.city}${visitorContext.country ? `, ${visitorContext.country}` : ""}` : visitorContext ? "Location unavailable" : "Detecting your area…"}</span>
           </div>
           <div className="profile-contact-actions">
-            <button className="contact-action chat" onClick={() => setChatOpen(true)}><MessageCircle size={17}/><span>Chat</span></button>
+            <button className="contact-action chat" onClick={() => { setChatDraft(""); setChatOpen(true); }}><MessageCircle size={17}/><span>Chat</span></button>
             {p.public_phone && <a className="contact-action call" href={`tel:${p.public_phone.replace(/[^+\d]/g, "")}`} onClick={() => track("CONTACT_PHONE_CLICK")}><Phone size={17}/><span>Direct call</span></a>}
             {p.public_email && <a className="contact-action" href={`mailto:${p.public_email}`} onClick={() => track("CONTACT_EMAIL_CLICK")}><Mail size={17}/><span>Private email</span></a>}
             <button className="contact-action" onClick={shareProfile}><Share2 size={17}/><span>Share</span></button>
@@ -251,6 +252,7 @@ export default function PublicProfilePage() {
         </div>
         <div className="viewer-location-chip-v10"><MapPin size={15}/><span>{visitorContext?.city ? `Approx. ${visitorContext.city}${visitorContext.country ? `, ${visitorContext.country}` : ""}` : visitorContext ? "Approx. location unavailable" : "Detecting approximate location…"}</span></div>
       </section>
+      <button className="mobile-chat-cta-v11" onClick={() => { setChatDraft(""); setChatOpen(true); }}><MessageCircle size={17}/> Chat with {p.display_name.split(" ")[0]}</button>
 
       {notice && <div className="profile-toast" onClick={() => setNotice("")}>{notice}<X size={14}/></div>}
 
@@ -307,9 +309,9 @@ export default function PublicProfilePage() {
 
     {reviewOpen && <div className="modal-backdrop" onMouseDown={() => setReviewOpen(false)}><section className="gate-modal review-modal" onMouseDown={e => e.stopPropagation()}><button className="modal-close" onClick={() => setReviewOpen(false)}><X/></button><span className="section-kicker">CLIENT REVIEW</span><h2>Share your experience</h2><p>Your review stays private until an Admin verifies it for publication.</p><form className="modal-form" onSubmit={submitReview}><div className="two-fields"><label>First name<input name="reviewer_first_name" required maxLength={60}/></label><label>Last name<input name="reviewer_last_name" required maxLength={60}/></label></div><label>Profile image <small>Optional</small><input name="reviewer_avatar" type="file" accept="image/*"/></label><label>Rating<select name="rating" defaultValue="5">{[5,4,3,2,1].map(n => <option value={n} key={n}>{"★".repeat(n)} {n} star{n > 1 ? "s" : ""}</option>)}</select></label><label>Review<textarea name="review_text" required minLength={10} maxLength={1200} rows={5} placeholder="Share a clear, respectful experience…"/></label>{reviewError && <div className="alert error">{reviewError}</div>}<button className="btn premium-cta wide" disabled={reviewBusy}>{reviewBusy ? "Submitting…" : "Submit for verification"}</button></form></section></div>}
 
-    <GuestChatPanel creatorId={p.id} displayName={p.display_name} phone={p.public_phone} open={chatOpen} onClose={() => setChatOpen(false)}/>
+    <GuestChatPanel creatorId={p.id} displayName={p.display_name} phone={p.public_phone} open={chatOpen} initialMessage={chatDraft} onClose={() => { setChatOpen(false); setChatDraft(""); }}/>
 
-    {checkoutOpen && <PrivateAccessModal creatorId={p.id} displayName={p.display_name} priceLabel={currency(p.exclusive_price, p.exclusive_currency)} btcAddress={p.btc_address} contactPhone={p.payment_contact_phone || p.public_phone} instructions={p.payment_instructions} onClose={() => setCheckoutOpen(false)} onUnlocked={async () => { setCheckoutOpen(false); setNotice("Private gallery unlocked temporarily on this browser."); await load(); }}/>}
+    {checkoutOpen && <PrivateAccessModal creatorId={p.id} displayName={p.display_name} priceLabel={currency(p.exclusive_price, p.exclusive_currency)} btcAddress={p.btc_address} contactPhone={p.payment_contact_phone || p.public_phone} instructions={p.payment_instructions} onClose={() => setCheckoutOpen(false)} onOpenChat={(draft) => { setCheckoutOpen(false); setChatDraft(draft || ""); setChatOpen(true); }} onUnlocked={async () => { setCheckoutOpen(false); setNotice("Private gallery unlocked temporarily on this browser."); await load(); }}/>}
 
     {selectedMedia && <div className="media-lightbox" onClick={() => setSelectedMedia(null)}><button className="modal-close lightbox-close"><X/></button><div className="lightbox-content" onClick={e => e.stopPropagation()}>{selectedMedia.type === "VIDEO" ? <video src={selectedMedia.media_url || undefined} controls autoPlay onEnded={() => track("VIDEO_COMPLETE", selectedMedia.id)}/> : <img src={selectedMedia.media_url || ""} alt={selectedMedia.title || "Media"}/>}<div className="lightbox-caption"><div><span>{selectedMedia.type}</span><strong>{selectedMedia.title}</strong><p>{selectedMedia.description}</p></div><button className={`tile-like big ${selectedMedia.liked_by_me ? "liked" : ""}`} onClick={() => toggleLike(selectedMedia)}><Heart size={18} fill={selectedMedia.liked_by_me ? "currentColor" : "none"}/>{selectedMedia.likes_count || 0}</button></div></div></div>}
   </main>;

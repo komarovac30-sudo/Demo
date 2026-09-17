@@ -1,0 +1,38 @@
+VELOURA V11 — MOBILE CHAT + PAYMENT PROOF
+==========================================
+
+What changed
+------------
+1. Mobile public profile now has a clear "Chat with <ES>" button below the hero.
+2. Payment contact keeps the requested layout:
+
+   PAYMENT CONTACT
+   +1 ...
+
+   [ Text ]   [ Copy ]
+        [ Chat ]
+
+3. Payment-screen Chat opens the same temporary web chat and pre-fills a payment message.
+4. Visitors can attach ONE JPG/PNG/WebP photo (max 4 MB) to a chat message, suitable for payment proof.
+5. Chat photos are stored in a PRIVATE Supabase Storage bucket and are shown only with short-lived signed URLs.
+6. Messages/photos use the existing 24-hour expiry model.
+
+Deployment
+----------
+If the GitHub Supabase migration secrets are configured, you do NOT need to paste SQL manually.
+
+- Extract this ZIP over your local Demo repository.
+- Commit and push to main.
+- GitHub Actions applies:
+  supabase/migrations/20260917000300_v11_chat_payment_proof.sql
+- Vercel deploys the web app from GitHub.
+
+Fallback
+--------
+If the migration workflow fails, the equivalent SQL is:
+  supabase/update-v11-chat-payment-proof.sql
+
+Important
+---------
+The chat attachment bucket is private. Never make "chat-attachments" public.
+The app accepts only JPG, PNG, and WebP, maximum 4 MB.
