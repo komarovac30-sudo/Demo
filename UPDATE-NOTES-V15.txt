@@ -1,0 +1,25 @@
+V15 VISUAL IDENTITY UPDATE
+
+Theme: Dark Editorial Luxury
+
+Palette
+- Near black: #09090D
+- Elevated surface: #111017
+- Secondary surface: #18151E
+- Deep plum: #9D5A91
+- Muted rose: #C16A88
+- Champagne: #D8B77A
+- Main text: #F4F0F2
+- Secondary text: #A69DA7
+
+Typography
+- Display / editorial: Cormorant Garamond
+- UI / body / forms: Manrope
+- Both are loaded through next/font/google and require no font subscription.
+
+Mobile
+- Removed Call from sticky quick actions.
+- Remaining actions: Text, Chat, Share.
+
+Database
+- No schema/data change in V15.

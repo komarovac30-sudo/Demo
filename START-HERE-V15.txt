@@ -1,0 +1,19 @@
+VELOURA V15 — DARK EDITORIAL LUXURY
+
+This release is a visual-identity refinement only. No database migration is required.
+
+What changed
+- Added free Cormorant Garamond display typography through Next.js next/font.
+- Added free Manrope UI/body typography through Next.js next/font.
+- Shifted the palette from bright purple/pink toward near-black, deep plum, muted rose and champagne.
+- Reduced neon/SaaS styling on public pages.
+- Refined primary/secondary buttons and card surfaces.
+- Updated gallery, reviews, private collection, sharing and chat accents to the new palette.
+- Kept ES Studio/Admin more restrained and utility-focused.
+- Removed Call from the mobile quick action bar. Mobile now shows Text / Chat / Share.
+
+Deployment
+1. Replace your current Demo repository files with this V15 package.
+2. Commit and push to main.
+3. Vercel deploys normally.
+4. There is no new Supabase migration for V15.

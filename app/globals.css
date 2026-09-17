@@ -253,3 +253,98 @@
 }
 .qr-skeleton-v14{width:200px;height:200px;border-radius:12px;background:linear-gradient(90deg,#efedf1,#fff,#efedf1);background-size:200% 100%;animation:qrShimmer 1.1s linear infinite}@keyframes qrShimmer{to{background-position:-200% 0}}
 @media(max-width:900px){.qr-skeleton-v14{width:160px;height:160px}}
+
+/* V15 — Dark Editorial Luxury visual identity */
+:root{
+  --bg:#09090d;
+  --bg2:#0d0c11;
+  --panel:#111017;
+  --panel2:#18151e;
+  --line:#29242e;
+  --text:#f4f0f2;
+  --muted:#a69da7;
+  --purple:#9d5a91;
+  --purple2:#71405f;
+  --pink:#c16a88;
+  --gold:#d8b77a;
+  --champagne:#d8b77a;
+  --green:#62c9a2;
+  --red:#df7084;
+  --shadow:0 26px 86px rgba(0,0,0,.44);
+  --font-ui:var(--font-manrope),ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-display:var(--font-cormorant),Georgia,"Times New Roman",serif;
+}
+body{font-family:var(--font-ui);font-weight:450;letter-spacing:-.005em}
+button,input,textarea,select{font-family:var(--font-ui)}
+
+/* Editorial display typography */
+.landing-hero-v5 h1,
+.profile-name-row h1,
+.section-title-row h2,
+.exclusive-copy-v5 h2,
+.about-story-v5 h2,
+.review-score-main-v14>strong,
+.private-gallery-price-v14 strong,
+.profile-details-head-v14 h3,
+.share-modal-v14 h2,
+.admin-count-card-v5 h2,
+.moderation-copy-v5 p,
+.veloura-brand>span{font-family:var(--font-display)}
+.landing-hero-v5 h1{font-weight:600;letter-spacing:-.035em}
+.profile-name-row h1{font-weight:600;letter-spacing:-.025em}
+.section-title-row h2,.exclusive-copy-v5 h2,.about-story-v5 h2{font-weight:600;letter-spacing:-.02em}
+
+/* Refined brand surfaces */
+.veloura-brand{letter-spacing:.16em}.veloura-brand>span{background:linear-gradient(145deg,#8d507f,#c16a88);box-shadow:0 8px 24px rgba(157,90,145,.22)}
+.workspace-kicker,.section-kicker{color:#cfa7bd}.section-kicker{color:#dec3cf}
+.round-icon{background:rgba(255,255,255,.045);border-color:rgba(216,183,122,.12)}.round-icon:hover{background:rgba(255,255,255,.08);border-color:rgba(216,183,122,.22)}
+
+/* Buttons: quiet utility first, accent reserved for primary CTA */
+.btn{background:#17151b;border-color:#2c2731}.btn.secondary{background:#151319;border-color:#302a34}.btn.ghost{border-color:#302a34;color:#d2cad0}
+.btn.primary{background:linear-gradient(135deg,#8d507f,#71405f);box-shadow:0 12px 30px rgba(113,64,95,.2)}
+.btn.premium-cta{background:linear-gradient(135deg,#8f507f 0%,#a95f7c 52%,#c16a88 100%);box-shadow:0 14px 34px rgba(157,90,145,.22)}
+
+/* Landing and public profile: dark editorial luxury */
+.landing-v5{background:radial-gradient(circle at 18% 0%,rgba(157,90,145,.15),transparent 31%),radial-gradient(circle at 88% 24%,rgba(216,183,122,.06),transparent 22%),#09090d}
+.public-profile-page{background:radial-gradient(circle at 50% -10%,rgba(157,90,145,.1),transparent 27%),#09090d}
+.profile-hero-v5{background:#111017;border-color:rgba(216,183,122,.09)}
+.cover-shade{background:linear-gradient(to bottom,rgba(7,7,10,.03) 12%,rgba(7,7,10,.22) 50%,rgba(7,7,10,.96) 100%),linear-gradient(90deg,rgba(9,9,13,.25),transparent 62%)}
+.verified-badge{color:#d8b77a}.profile-headline{color:#e7dfe4}.profile-location{color:#aaa0a7}
+.contact-action{background:rgba(17,15,20,.66);border-color:rgba(216,183,122,.11)}.contact-action.call{background:rgba(157,90,145,.13);border-color:rgba(193,106,136,.2)}.contact-action:hover{background:rgba(255,255,255,.075);border-color:rgba(216,183,122,.18)}
+.public-stat-strip{background:rgba(9,9,13,.9);border-top-color:rgba(216,183,122,.07)}.public-stat-strip svg{color:#bd819f}.trust-stat b{color:#e0c694}
+.profile-tabs-v5{background:rgba(9,9,13,.92)}.profile-tabs-v5 button.active:after{background:linear-gradient(90deg,#9d5a91,#d8b77a)}
+
+/* Gallery cards and private access */
+.media-tile-v5{background:#15131a;border-color:rgba(216,183,122,.065)}
+.private-gallery-v14{border-color:rgba(216,183,122,.14)!important;background:radial-gradient(circle at 0 0,rgba(157,90,145,.12),transparent 36%),linear-gradient(145deg,#111017,#0a090d)!important}
+.private-gallery-meta-v14 svg{color:#c58ca8}.private-gallery-price-v14 strong{color:#ead4ab}
+.review-score-card-v14,.rating-breakdown-v14,.profile-details-card-v14{border-color:rgba(216,183,122,.085)!important;background:linear-gradient(145deg,#121017,#0e0d12)!important}
+.rating-breakdown-v14 i{background:linear-gradient(90deg,#d8b77a,#c16a88)}
+.review-filters-v14 button.active{border-color:rgba(216,183,122,.28);background:rgba(157,90,145,.13)}
+.review-card-v14:before{background:linear-gradient(#d8b77a,transparent)}
+.review-stars,.stars-line{color:#d8b77a}
+
+/* Share / modal surfaces */
+.share-modal-v14{background:radial-gradient(circle at 0 0,rgba(157,90,145,.11),transparent 36%),#111017;border-color:rgba(216,183,122,.1)}
+.share-options-v14 a,.share-options-v14 button{background:#161319;border-color:#2e2932}.share-options-v14 a:hover,.share-options-v14 button:hover{border-color:rgba(216,183,122,.22);background:#1b171e}
+
+/* Studio/Admin remain restrained and utility-first */
+.workspace-shell-v5,.admin-shell-v5{--purple:#956083;--purple2:#70455f;--pink:#b96d88}
+.metric-v5,.admin-count-card-v5,.workspace-card-v5,.quick-action-grid-v5>a{border-color:#29242e}
+.quick-action-grid-v5>a:hover{border-color:#55404e;background:#141118}
+.quick-action-grid-v5>a>svg:first-child,.admin-secondary-metrics-v5 svg,.count-icon-v5{color:#bd819f}
+.status-chip-v5.pending{color:#d8b77a;border-color:rgba(216,183,122,.2);background:rgba(216,183,122,.055)}
+
+/* Chat follows the same restrained plum/rose system */
+.chat-avatar-v10,.thread-avatar-v10{background:linear-gradient(145deg,#8e527e,#b35f82)}
+.chat-bubble-v10.mine{background:linear-gradient(135deg,#8d507f,#bd6687)}
+.chat-compose-v10 button{background:linear-gradient(135deg,#8d507f,#bd6687)}
+.contact-action.chat{background:rgba(157,90,145,.12);border-color:rgba(193,106,136,.19)}
+
+/* Mobile action bar: Text / Chat / Share only */
+@media(max-width:700px){
+  .mobile-quick-actions-v14{grid-template-columns:repeat(3,1fr);grid-auto-flow:unset;grid-auto-columns:unset;background:rgba(13,12,16,.93);border-color:rgba(216,183,122,.12);box-shadow:0 18px 50px rgba(0,0,0,.56)}
+  .mobile-quick-actions-v14>a,.mobile-quick-actions-v14>button{color:#ddd4da}
+  .mobile-quick-actions-v14>a:nth-child(2),.mobile-quick-actions-v14>button:nth-child(2){background:rgba(157,90,145,.16);color:#fff}
+  .mobile-quick-actions-v14 svg{color:#c484a3}
+}
