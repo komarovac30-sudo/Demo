@@ -3,8 +3,8 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  BadgeCheck, BarChart3, Check, ChevronRight, Eye, FileImage, Heart, ImagePlus, Images, LockKeyhole, LogOut, Mail,
-  Pencil, Phone, RotateCcw, Save, ShieldCheck, Sparkles, Star, Trash2, Unlock, Upload, Users, X, MessageCircle
+  BadgeCheck, BarChart3, Check, ChevronRight, Copy, Eye, FileImage, Heart, ImagePlus, Images, LockKeyhole, LogOut, Mail,
+  Pencil, Phone, QrCode, RotateCcw, Save, ShieldCheck, Sparkles, Star, Trash2, Unlock, Upload, Users, X, MessageCircle
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-browser";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
@@ -15,7 +15,7 @@ type Profile = {
   id:string; username:string; display_name:string; bio:string|null; headline:string|null;
   avatar_url:string|null; cover_url:string|null; public_phone:string|null; public_email:string|null;
   phone_visible:boolean; email_visible:boolean; exclusive_price:number; exclusive_currency:string; role:string;
-  profile_likes_count?:number;
+  profile_likes_count?:number; age?:number|null; height_label?:string|null; body_type?:string|null; ethnicity?:string|null; hair_color?:string|null; eye_color?:string|null; measurements?:string|null; cup_size?:string|null; languages?:string|null; tattoos_piercings?:string|null;
 };
 type Media = { id:string; type:"PHOTO"|"VIDEO"; visibility:"PUBLIC"|"LOCKED"; title:string|null; description:string|null; media_url:string; thumbnail_url?:string|null; created_at:string; likes_count?:number };
 type Review = {
@@ -45,11 +45,12 @@ export default function CreatorDashboard() {
   const [editingMediaLike,setEditingMediaLike]=useState<string|null>(null); const [mediaLikeDraft,setMediaLikeDraft]=useState("");
   const [reviewAvatarPreview,setReviewAvatarPreview]=useState("");
   const [reviewUploadProgress,setReviewUploadProgress]=useState(0);
+  const [siteOrigin,setSiteOrigin]=useState("");
   const avatarInput=useRef<HTMLInputElement>(null); const coverInput=useRef<HTMLInputElement>(null); const mediaInput=useRef<HTMLInputElement>(null); const reviewAvatarInput=useRef<HTMLInputElement>(null);
 
   const load=useCallback(async()=>{
     const {data:{user}}=await supabase.auth.getUser(); if(!user){setReady(true);return;}
-    const {data:p}=await supabase.from("profiles").select("id,username,display_name,bio,headline,avatar_url,cover_url,public_phone,public_email,phone_visible,email_visible,exclusive_price,exclusive_currency,profile_likes_count,role").eq("id",user.id).single();
+    const {data:p}=await supabase.from("profiles").select("id,username,display_name,bio,headline,avatar_url,cover_url,public_phone,public_email,phone_visible,email_visible,exclusive_price,exclusive_currency,profile_likes_count,role,age,height_label,body_type,ethnicity,hair_color,eye_color,measurements,cup_size,languages,tattoos_piercings").eq("id",user.id).single();
     if(!p||p.role!=="CREATOR"){setReady(true);return;} setAuthorized(true); setProfile(p as Profile); setProfileLikesDraft(String(Number(p.profile_likes_count||0)));
     const [{data:m},{data:r},{data:pay},{data:{session}}]=await Promise.all([
       supabase.from("media").select("id,type,visibility,title,description,media_url,thumbnail_url,created_at,likes_count").eq("creator_id",user.id).order("created_at",{ascending:false}),
@@ -69,6 +70,7 @@ export default function CreatorDashboard() {
     setReady(true);
   },[]);
   useEffect(()=>{load();},[load]);
+  useEffect(()=>{if(typeof window!=="undefined")setSiteOrigin(window.location.origin);},[]);
 
   useEffect(()=>{
     if(!selectedFile){setMediaPreview("");return;}
@@ -87,6 +89,8 @@ export default function CreatorDashboard() {
       headline:String(form.get("headline")||"").trim()||null,bio:String(form.get("bio")||"").trim()||null,
       public_phone:String(form.get("public_phone")||"").trim()||null,public_email:String(form.get("public_email")||"").trim()||null,
       phone_visible:form.get("phone_visible")==="on",email_visible:form.get("email_visible")==="on",
+      age:form.get("age")?Number(form.get("age")):null,height_label:String(form.get("height_label")||"").trim()||null,body_type:String(form.get("body_type")||"").trim()||null,ethnicity:String(form.get("ethnicity")||"").trim()||null,
+      hair_color:String(form.get("hair_color")||"").trim()||null,eye_color:String(form.get("eye_color")||"").trim()||null,measurements:String(form.get("measurements")||"").trim()||null,cup_size:String(form.get("cup_size")||"").trim()||null,languages:String(form.get("languages")||"").trim()||null,tattoos_piercings:String(form.get("tattoos_piercings")||"").trim()||null,
       exclusive_price:Number(form.get("exclusive_price")||0),exclusive_currency:String(form.get("exclusive_currency")||"USD"),updated_at:new Date().toISOString(),
     };
     const {error:updateError}=await supabase.from("profiles").update(payload).eq("id",profile.id);setBusy("");
@@ -199,11 +203,28 @@ export default function CreatorDashboard() {
           <label>Headline<input name="headline" defaultValue={profile.headline||""} maxLength={120} placeholder="Independent companion • Private gallery • Discreet connection"/></label>
           <div className="auto-location-note-v6"><span className="live-dot-v6"/><div><strong>Automatic visitor location</strong><p>The public page detects the current viewer&apos;s approximate city from IP/network data. ES users do not need to set a location manually.</p></div></div>
           <label>About me<textarea name="bio" defaultValue={profile.bio||""} rows={5} maxLength={1000}/></label>
+          <div className="profile-details-editor-v14"><div className="details-editor-head-v14"><div><span className="workspace-kicker">PROFILE DETAILS</span><strong>Optional details shown in About Me</strong><small>Use only details you are comfortable showing publicly.</small></div></div><div className="details-editor-grid-v14">
+            <label>Age<input name="age" type="number" min="18" max="99" defaultValue={profile.age??""} placeholder="28"/></label>
+            <label>Height<input name="height_label" defaultValue={profile.height_label||""} maxLength={40} placeholder={`5'6" / 168 cm`}/></label>
+            <label>Body type<select name="body_type" defaultValue={profile.body_type||""}><option value="">Not shown</option><option>Slim</option><option>Petite</option><option>Athletic</option><option>Curvy</option><option>Average</option><option>Full Figure</option><option>Other</option></select></label>
+            <label>Ethnicity<input name="ethnicity" defaultValue={profile.ethnicity||""} maxLength={60} placeholder="Optional"/></label>
+            <label>Hair<input name="hair_color" defaultValue={profile.hair_color||""} maxLength={60} placeholder="Dark brown, long"/></label>
+            <label>Eyes<input name="eye_color" defaultValue={profile.eye_color||""} maxLength={40} placeholder="Brown"/></label>
+            <label>Measurements<input name="measurements" defaultValue={profile.measurements||""} maxLength={40} placeholder="34-26-36"/></label>
+            <label>Cup size<input name="cup_size" defaultValue={profile.cup_size||""} maxLength={20} placeholder="Optional"/></label>
+            <label>Languages<input name="languages" defaultValue={profile.languages||""} maxLength={120} placeholder="English, Spanish"/></label>
+            <label>Tattoos / piercings<input name="tattoos_piercings" defaultValue={profile.tattoos_piercings||""} maxLength={120} placeholder="Optional"/></label>
+          </div></div>
           <div className="two-fields"><label><span><Phone size={14}/> Direct contact</span><input name="public_phone" defaultValue={profile.public_phone||""} placeholder="+1 (305) 555-0148"/></label><label><span><Mail size={14}/> Private email</span><input name="public_email" type="email" defaultValue={profile.public_email||""} placeholder="hello@example.com"/></label></div>
           <div className="visibility-row-v5"><label className="toggle-row"><input name="phone_visible" type="checkbox" defaultChecked={profile.phone_visible}/><span/>Show direct contact publicly</label><label className="toggle-row"><input name="email_visible" type="checkbox" defaultChecked={profile.email_visible}/><span/>Show private email publicly</label></div>
           <div className="two-fields"><label>Private gallery access price<input name="exclusive_price" type="number" min="0" step="0.01" defaultValue={Number(profile.exclusive_price||0)}/></label><label>Currency<select name="exclusive_currency" defaultValue={profile.exclusive_currency||"USD"}><option>USD</option><option>EUR</option><option>GBP</option><option>CAD</option></select></label></div>
           <div className="form-actions-v5"><button className="btn primary" disabled={busy==="save"}><Save size={17}/>{busy==="save"?"Saving…":"Save profile"}</button><Link className="btn ghost" href={`/u/${profile.username}`}>Preview public page</Link></div>
         </form>
+      </section>
+
+      <section className="workspace-panel-v5 profile-share-panel-v14">
+        <div className="panel-head-v5"><div><span className="workspace-kicker">SHARE MY PROFILE</span><h2>Your public profile QR</h2><p>Share the link directly or let someone scan the QR code from another phone.</p></div><QrCode/></div>
+        <div className="profile-share-layout-v14"><div className="profile-qr-card-v14">{siteOrigin?<img src={`https://quickchart.io/qr?text=${encodeURIComponent(`${siteOrigin}/u/${profile.username}`)}&size=240&margin=2&dark=2b1735&light=ffffff`} alt="Public profile QR code"/>:<div className="qr-skeleton-v14"/>}</div><div className="profile-share-copy-v14"><span>Public profile</span><strong>{siteOrigin ? `${siteOrigin}/u/${profile.username}` : `/u/${profile.username}`}</strong><div><button className="btn secondary" type="button" onClick={async()=>{const url=`${window.location.origin}/u/${profile.username}`;await navigator.clipboard.writeText(url);flash("Profile link copied.");}}><Copy size={15}/> Copy link</button><Link className="btn primary" href={`/u/${profile.username}`}>Open profile</Link></div><small>QR generation uses the public profile URL only; it does not contain account credentials.</small></div></div>
       </section>
 
       <CreatorPaymentSettings fallbackPhone={profile.public_phone}/>

@@ -1,0 +1,30 @@
+VELOURA V14 — TRUST + PREMIUM PROFILE
+====================================
+
+1. Replace your existing Demo repository files with this V14 project.
+2. Commit and push to main.
+3. GitHub Actions should automatically apply:
+   supabase/migrations/20260918000100_v14_profile_trust_details.sql
+4. Confirm the GitHub migration Action is green.
+5. Let Vercel deploy normally.
+
+OPTIONAL DEMO DETAILS
+---------------------
+If you want the fictional @creator profile populated with the new About details, run manually:
+  supabase/seed-demo-v14.sql
+
+This optional seed does NOT replace reviews/media; it only fills the new optional profile-detail fields for @creator.
+
+V14 FEATURES
+------------
+- stronger review trust area + rating distribution/filters
+- sticky mobile Call / Text / Chat / Share bar
+- premium Private Gallery presentation
+- profile share modal: device share, SMS, WhatsApp, Telegram, copy link + QR
+- Creator Studio public-profile QR card
+- optional About details: age, height, body type, ethnicity, hair, eyes, measurements, cup size, languages, tattoos/piercings
+- premium visual polish
+
+QR NOTE
+-------
+The QR image uses QuickChart's public QR endpoint and contains only the public /u/{username} URL.

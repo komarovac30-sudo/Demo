@@ -26,6 +26,16 @@ create table public.profiles (
   exclusive_price numeric(10,2) not null default 24.99 check (exclusive_price >= 0),
   exclusive_currency text not null default 'USD',
   profile_likes_count integer not null default 0 check (profile_likes_count >= 0),
+  age smallint check (age is null or (age between 18 and 99)),
+  height_label text,
+  body_type text,
+  ethnicity text,
+  hair_color text,
+  eye_color text,
+  measurements text,
+  cup_size text,
+  languages text,
+  tattoos_piercings text,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -218,5 +228,5 @@ for select to authenticated using(public.is_admin());
 
 -- Hardening: authenticated users can update only public presentation fields on their own profile.
 revoke update on table public.profiles from authenticated;
-grant update(username,display_name,headline,bio,avatar_url,cover_url,public_phone,public_email,phone_visible,email_visible,exclusive_price,exclusive_currency,updated_at)
+grant update(username,display_name,headline,bio,avatar_url,cover_url,public_phone,public_email,phone_visible,email_visible,exclusive_price,exclusive_currency,age,height_label,body_type,ethnicity,hair_color,eye_color,measurements,cup_size,languages,tattoos_piercings,updated_at)
   on public.profiles to authenticated;

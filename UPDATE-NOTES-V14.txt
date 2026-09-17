@@ -1,0 +1,21 @@
+V14 changes
+===========
+
+PUBLIC PROFILE
+- Review area redesigned around trust: verified summary, rating bars, filters and verified dates.
+- Private Collection renamed/presented as a more premium Private Gallery experience.
+- Mobile sticky action bar: Call, Text, Chat, Share.
+- New share modal with Copy Link, native/device share, SMS, WhatsApp, Telegram and QR.
+- About Me now supports optional structured profile details.
+- Public footer wording made less demo-like.
+
+CREATOR STUDIO
+- Added optional public profile-detail fields.
+- Added public-profile QR card and copy-link action.
+
+DATABASE
+- New migration adds optional profile-detail columns and update grants.
+- No review/media/payment/chat schema was replaced.
+
+RESEARCH
+- See UX-RESEARCH-V14.md.

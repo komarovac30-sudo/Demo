@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
-  BadgeCheck, ChevronRight, Heart, Images, LockKeyhole, Mail, MapPin, MessageCircle, MessageSquareText,
+  BadgeCheck, ChevronRight, Copy, Heart, Images, LockKeyhole, Mail, MapPin, MessageCircle, MessageSquareText,
   Phone, Play, Share2, ShieldCheck, Sparkles, Star, Unlock, Video, X
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-browser";
@@ -20,12 +20,13 @@ type Media = {
 };
 type Review = {
   id: string; reviewer_name: string; reviewer_first_name?: string | null; reviewer_last_name?: string | null;
-  reviewer_avatar_url?: string | null; rating: number; review_text: string; is_featured: boolean; created_at?: string; source?: string;
+  reviewer_avatar_url?: string | null; rating: number; review_text: string; is_featured: boolean; created_at?: string; source?: string; verified_at?: string | null;
 };
 type Profile = {
   id: string; username: string; display_name: string; bio: string | null; headline: string | null;
   avatar_url: string | null; cover_url: string | null; is_verified: boolean; public_phone: string | null; public_email: string | null;
   exclusive_price: number; exclusive_currency: string; profile_likes_count?: number;
+  age?: number | null; height_label?: string | null; body_type?: string | null; ethnicity?: string | null; hair_color?: string | null; eye_color?: string | null; measurements?: string | null; cup_size?: string | null; languages?: string | null; tattoos_piercings?: string | null;
   btc_address?: string | null; payment_contact_phone?: string | null; payment_instructions?: string | null; unlock_code_configured?: boolean; chat_force_sms_only?: boolean;
 };
 type Payload = { profile: Profile; media: Media[]; reviews: Review[]; unlocked: boolean };
@@ -51,6 +52,7 @@ export default function PublicProfilePage() {
   const [visitorContext, setVisitorContext] = useState<VisitorContext | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("media");
   const [reviewLimit, setReviewLimit] = useState(6);
+  const [reviewFilter, setReviewFilter] = useState<"all" | "5" | "4" | "3" | "2" | "1" | "featured">("all");
   const [selectedMedia, setSelectedMedia] = useState<Media | null>(null);
   const [notice, setNotice] = useState("");
   const [liking, setLiking] = useState<Set<string>>(new Set());
@@ -65,6 +67,8 @@ export default function PublicProfilePage() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatDraft, setChatDraft] = useState("");
+  const [shareOpen, setShareOpen] = useState(false);
+  const [profileUrl, setProfileUrl] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -79,6 +83,7 @@ export default function PublicProfilePage() {
   }, [username]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (typeof window !== "undefined") setProfileUrl(window.location.href); }, []);
   useEffect(() => {
     if (!data?.profile.id) return;
     track("PROFILE_VIEW").then(context => setVisitorContext(context || { city: null, country: null, region: null }));
@@ -101,12 +106,20 @@ export default function PublicProfilePage() {
     } catch { return null; }
   }
 
-  async function shareProfile() {
-    const url = window.location.href;
+  function shareProfile() { setShareOpen(true); }
+
+  async function nativeShareProfile() {
+    const url = profileUrl || window.location.href;
     try {
-      if (navigator.share) await navigator.share({ title: data?.profile.display_name || "Profile", url });
+      if (navigator.share) await navigator.share({ title: data?.profile.display_name || "Veloura profile", url });
       else { await navigator.clipboard.writeText(url); setNotice("Profile link copied."); }
     } catch { /* share cancelled */ }
+  }
+
+  async function copyProfileLink() {
+    const url = profileUrl || window.location.href;
+    await navigator.clipboard.writeText(url);
+    setNotice("Profile link copied.");
   }
 
   async function startGate(intent: GateIntent, mediaId?: string) {
@@ -213,6 +226,19 @@ export default function PublicProfilePage() {
   const photoCount = useMemo(() => data?.media.filter(m => m.type === "PHOTO").length || 0, [data]);
   const videoCount = useMemo(() => data?.media.filter(m => m.type === "VIDEO").length || 0, [data]);
   const averageRating = useMemo(() => data?.reviews.length ? data.reviews.reduce((sum, r) => sum + r.rating, 0) / data.reviews.length : 0, [data]);
+  const ratingCounts = useMemo(() => {
+    const counts = [0,0,0,0,0,0];
+    (data?.reviews || []).forEach(r => { if (r.rating >= 1 && r.rating <= 5) counts[r.rating] += 1; });
+    return counts;
+  }, [data]);
+  const filteredReviews = useMemo(() => {
+    const list = data?.reviews || [];
+    if (["5","4","3","2","1"].includes(reviewFilter)) return list.filter(r => r.rating === Number(reviewFilter));
+    if (reviewFilter === "featured") return list.filter(r => r.is_featured);
+    return list;
+  }, [data, reviewFilter]);
+  const exclusivePhotoCount = useMemo(() => exclusiveMedia.filter(m => m.type === "PHOTO").length, [exclusiveMedia]);
+  const exclusiveVideoCount = useMemo(() => exclusiveMedia.filter(m => m.type === "VIDEO").length, [exclusiveMedia]);
 
   if (loading) return <PublicProfileSkeleton/>;
   if (!data) return <div className="center-screen"><div className="friendly-error"><h2>Profile unavailable</h2><p>This profile may be inactive or the link may be incorrect.</p><Link href="/" className="btn primary">Back home</Link></div></div>;
@@ -267,39 +293,58 @@ export default function PublicProfilePage() {
           <div className="media-tile-overlay"><div><span>{item.type === "VIDEO" ? "VIDEO" : "PHOTO"}</span><strong>{item.title || "Untitled"}</strong></div><button className={`tile-like ${item.liked_by_me ? "liked" : ""}`} disabled={liking.has(item.id)} onClick={e => { e.stopPropagation(); toggleLike(item); }}><Heart size={16} fill={item.liked_by_me ? "currentColor" : "none"}/>{Number(item.likes_count || 0)}</button></div>
         </article>)}</div> : <div className="empty-card-v5">The public gallery is being curated. Check back soon.</div>}
 
-        <section className={`exclusive-showcase-v5 ${data.unlocked ? "unlocked" : ""}`}>
-          <div className="exclusive-copy-v5"><span className="section-kicker"><LockKeyhole size={13}/> PRIVATE COLLECTION</span><h2>{data.unlocked ? "Your private collection is open" : "A little more personal."}</h2><p>{data.unlocked ? "Your access is active. Enjoy the full private photo and video collection." : "Unlock the current private collection for this profile. Access is tied only to this creator."}</p>
-            {!data.unlocked && <button className="btn premium-cta" onClick={() => startGate("unlock")}><Unlock size={18}/> Unlock Private Gallery • {currency(p.exclusive_price, p.exclusive_currency)}</button>}
-            {data.unlocked && <span className="unlocked-label"><ShieldCheck size={16}/> Access active</span>}
+        <section className={`exclusive-showcase-v5 private-gallery-v14 ${data.unlocked ? "unlocked" : ""}`}>
+          <div className="exclusive-copy-v5 private-gallery-copy-v14"><span className="section-kicker"><LockKeyhole size={13}/> PRIVATE GALLERY</span><h2>{data.unlocked ? "Your private gallery is open." : "A more private side of my gallery."}</h2><p>{data.unlocked ? "Your access is active. Explore the complete private photo and video collection." : "A curated collection shared only with visitors who have private access."}</p>
+            <div className="private-gallery-meta-v14"><span><Images size={14}/><b>{exclusivePhotoCount}</b> photos</span><span><Video size={14}/><b>{exclusiveVideoCount}</b> videos</span><span><ShieldCheck size={14}/> Private access</span></div>
+            {!data.unlocked && <><div className="private-gallery-price-v14"><strong>{currency(p.exclusive_price, p.exclusive_currency)}</strong><span>Private Gallery access</span></div><button className="btn premium-cta private-gallery-cta-v14" onClick={() => startGate("unlock")}><Unlock size={18}/> Unlock Private Gallery</button><small className="private-gallery-note-v14">Pay with Bitcoin or arrange payment directly, then unlock with your private code.</small></>}
+            {data.unlocked && <span className="unlocked-label"><ShieldCheck size={16}/> Private access active</span>}
           </div>
-          <div className="exclusive-grid-v5">{exclusiveMedia.slice(0, 4).map((item, index) => <article key={item.id} className={`exclusive-tile ${item.locked ? "locked" : ""}`} onClick={() => openMedia(item)}>
-            {item.locked ? <img src={`/demo/locked-v5-0${Math.min(index + 1, 4)}.svg`} alt="Locked preview"/> : item.type === "VIDEO" ? <video src={item.media_url || undefined} muted playsInline/> : <img src={item.media_url || "/demo/locked-v5-01.svg"} alt={item.title || "Private media"}/>} 
+          <div className="exclusive-grid-v5 private-preview-grid-v14">{exclusiveMedia.slice(0, 4).map((item, index) => <article key={item.id} className={`exclusive-tile ${item.locked ? "locked" : ""}`} onClick={() => openMedia(item)}>
+            {item.locked ? <img src={`/demo/locked-v5-0${Math.min(index + 1, 4)}.svg`} alt="Private preview"/> : item.type === "VIDEO" ? <video src={item.media_url || undefined} muted playsInline/> : <img src={item.media_url || "/demo/locked-v5-01.svg"} alt={item.title || "Private media"}/>} 
             {item.locked && <div className="locked-mask"><LockKeyhole size={22}/><span>Private</span></div>}
             {!item.locked && <div className="media-tile-overlay"><strong>{item.title}</strong><button className={`tile-like ${item.liked_by_me ? "liked" : ""}`} onClick={e => { e.stopPropagation(); toggleLike(item); }}><Heart size={15} fill={item.liked_by_me ? "currentColor" : "none"}/>{item.likes_count || 0}</button></div>}
           </article>)}</div>
         </section>
       </section>}
 
-      {activeTab === "reviews" && <section className="profile-section-v5 reviews-section-v5">
-        <div className="review-summary-v5"><div className="review-score"><strong>{averageRating ? averageRating.toFixed(1) : "—"}</strong><div><span className="stars-line">{"★".repeat(Math.round(averageRating || 0))}{"☆".repeat(5 - Math.round(averageRating || 0))}</span><p>Based on {data.reviews.length} verified client reviews</p></div></div><button className="btn secondary" onClick={() => startGate("review")}><MessageSquareText size={17}/> Share your experience</button></div>
-        <div className="trust-note-v5"><ShieldCheck size={18}/><div><strong>Trust comes first.</strong><span>Every review is moderated before it appears publicly. Browsing reviews never requires an account.</span></div></div>
-        {data.reviews.length ? <><div className="review-grid-v5">{data.reviews.slice(0, reviewLimit).map(review => <article key={review.id} className={`review-card-v5 ${review.is_featured ? "featured" : ""}`}>
-          <div className="review-head-v5"><img src={review.reviewer_avatar_url || "/demo/reviewers/default-reviewer.svg"} alt=""/><div><strong>{reviewerDisplay(review)}</strong><span>Verified Review</span></div><span className="review-stars">{"★".repeat(review.rating)}</span></div>
-          <p>“{review.review_text}”</p>{review.is_featured && <span className="featured-review-label"><Sparkles size={12}/> Featured review</span>}
-        </article>)}</div>{data.reviews.length > reviewLimit && <div className="review-more-v8"><button className="btn secondary" onClick={() => setReviewLimit(limit => limit + 6)}>Show more verified reviews</button></div>}</> : <div className="empty-card-v5">No published reviews yet.</div>}
+      {activeTab === "reviews" && <section className="profile-section-v5 reviews-section-v5 reviews-trust-v14">
+        <div className="reviews-trust-head-v14">
+          <div className="review-score-card-v14"><span className="section-kicker"><ShieldCheck size={13}/> VERIFIED CLIENT REVIEWS</span><div className="review-score-main-v14"><strong>{averageRating ? averageRating.toFixed(1) : "—"}</strong><div><span className="stars-line">{"★".repeat(Math.round(averageRating || 0))}{"☆".repeat(5 - Math.round(averageRating || 0))}</span><p>{data.reviews.length} admin-verified reviews</p></div></div><div className="review-trust-badges-v14"><span><BadgeCheck size={14}/> Admin verified</span><span><ShieldCheck size={14}/> Moderated before publishing</span></div></div>
+          <div className="rating-breakdown-v14">{[5,4,3,2,1].map(stars => { const count = ratingCounts[stars]; const pct = data.reviews.length ? Math.round((count / data.reviews.length) * 100) : 0; return <div key={stars}><button onClick={() => { setReviewFilter(String(stars) as "5" | "4" | "3" | "2" | "1"); setReviewLimit(6); }}>{stars}★</button><span><i style={{width:`${pct}%`}}/></span><em>{count}</em></div>; })}</div>
+        </div>
+        <div className="review-toolbar-v14"><div className="review-filters-v14"><button className={reviewFilter === "all" ? "active" : ""} onClick={() => { setReviewFilter("all"); setReviewLimit(6); }}>All</button><button className={reviewFilter === "5" ? "active" : ""} onClick={() => { setReviewFilter("5"); setReviewLimit(6); }}>5★</button><button className={reviewFilter === "4" ? "active" : ""} onClick={() => { setReviewFilter("4"); setReviewLimit(6); }}>4★</button><button className={reviewFilter === "featured" ? "active" : ""} onClick={() => { setReviewFilter("featured"); setReviewLimit(6); }}>Featured</button></div><button className="btn secondary" onClick={() => startGate("review")}><MessageSquareText size={17}/> Share your experience</button></div>
+        {filteredReviews.length ? <><div className="review-grid-v5">{filteredReviews.slice(0, reviewLimit).map(review => <article key={review.id} className={`review-card-v5 review-card-v14 ${review.is_featured ? "featured" : ""}`}>
+          <div className="review-head-v5"><img src={review.reviewer_avatar_url || "/demo/reviewers/default-reviewer.svg"} alt=""/><div><strong>{reviewerDisplay(review)}</strong><span><BadgeCheck size={12}/> Verified Review</span></div><span className="review-stars">{"★".repeat(review.rating)}</span></div>
+          <p>“{review.review_text}”</p><div className="review-card-foot-v14">{review.verified_at && <time>{new Date(review.verified_at).toLocaleDateString("en-US", { month:"short", year:"numeric" })}</time>}{review.is_featured && <span className="featured-review-label"><Sparkles size={12}/> Featured</span>}</div>
+        </article>)}</div>{filteredReviews.length > reviewLimit && <div className="review-more-v8"><button className="btn secondary" onClick={() => setReviewLimit(limit => limit + 6)}>Show more verified reviews</button></div>}</> : <div className="empty-card-v5">No reviews match this filter yet.</div>}
       </section>}
 
-      {activeTab === "about" && <section className="profile-section-v5 about-section-v5">
+      {activeTab === "about" && <section className="profile-section-v5 about-section-v5 about-profile-v14">
         <div className="about-story-v5"><span className="section-kicker">ABOUT ME</span><h2>Get to know {p.display_name.split(" ")[0]}.</h2><p>{p.bio || "This profile owner has not added an About section yet."}</p></div>
-        <div className="about-side-v5">
-          <article><MapPin/><div><span>Your approximate location</span><strong>{visitorContext?.city ? `${visitorContext.city}${visitorContext.country ? `, ${visitorContext.country}` : ""}` : visitorContext ? "Location unavailable" : "Detecting from your network…"}</strong></div></article>
+        <div className="profile-details-card-v14">
+          <div className="profile-details-head-v14"><div><span className="section-kicker">PROFILE DETAILS</span><h3>At a glance</h3></div><BadgeCheck size={20}/></div>
+          <div className="profile-details-grid-v14">
+            {p.age ? <div><span>Age</span><strong>{p.age}</strong></div> : null}
+            {p.height_label ? <div><span>Height</span><strong>{p.height_label}</strong></div> : null}
+            {p.body_type ? <div><span>Body type</span><strong>{p.body_type}</strong></div> : null}
+            {p.ethnicity ? <div><span>Ethnicity</span><strong>{p.ethnicity}</strong></div> : null}
+            {p.hair_color ? <div><span>Hair</span><strong>{p.hair_color}</strong></div> : null}
+            {p.eye_color ? <div><span>Eyes</span><strong>{p.eye_color}</strong></div> : null}
+            {p.measurements ? <div><span>Measurements</span><strong>{p.measurements}</strong></div> : null}
+            {p.cup_size ? <div><span>Cup size</span><strong>{p.cup_size}</strong></div> : null}
+            {p.languages ? <div><span>Languages</span><strong>{p.languages}</strong></div> : null}
+            {p.tattoos_piercings ? <div><span>Tattoos / piercings</span><strong>{p.tattoos_piercings}</strong></div> : null}
+          </div>
+        </div>
+        <div className="about-side-v5 about-trust-v14">
           <article><BadgeCheck/><div><span>Profile status</span><strong>{p.is_verified ? "Verified profile" : "Active profile"}</strong></div></article>
-          <article><LockKeyhole/><div><span>Private collection</span><strong>{exclusiveMedia.length} exclusive items</strong></div></article>
+          <article><LockKeyhole/><div><span>Private Gallery</span><strong>{exclusiveMedia.length} private items</strong></div></article>
+          <article><Star/><div><span>Client trust</span><strong>{averageRating ? `${averageRating.toFixed(1)} from ${data.reviews.length} reviews` : "New profile"}</strong></div></article>
           {(p.public_phone || p.public_email) && <article><Phone/><div><span>Connect privately</span><strong>{p.public_phone || p.public_email}</strong></div></article>}
         </div>
       </section>}
 
-      <footer className="public-profile-footer"><div className="veloura-brand small"><span>V</span>VELOURA</div><p>Client preview • Fictional profile, media and review data used for demonstration.</p></footer>
+      <footer className="public-profile-footer"><div className="veloura-brand small"><span>V</span>VELOURA</div><p>Private profile • 18+ only • Respect privacy, consent and local law.</p></footer>
     </div>
 
     {gateIntent && <div className="modal-backdrop" onMouseDown={() => setGateIntent(null)}><section className="gate-modal" onMouseDown={e => e.stopPropagation()}><button className="modal-close" onClick={() => setGateIntent(null)}><X/></button><div className="modal-icon"><ShieldCheck/></div><span className="section-kicker">{gateIntent === "review" ? "REVIEW IDENTITY" : "PRIVATE ACCESS"}</span><h2>{gateIntent === "review" ? "Sign in before reviewing" : "Sign in to continue"}</h2><p>Your account is requested only for this gated action. Normal profile browsing stays open.</p>
@@ -312,6 +357,10 @@ export default function PublicProfilePage() {
     <GuestChatPanel creatorId={p.id} displayName={p.display_name} phone={p.payment_contact_phone || p.public_phone} open={chatOpen} initialMessage={chatDraft} onClose={() => { setChatOpen(false); setChatDraft(""); }}/>
 
     {checkoutOpen && <PrivateAccessModal creatorId={p.id} displayName={p.display_name} priceLabel={currency(p.exclusive_price, p.exclusive_currency)} btcAddress={p.btc_address} contactPhone={p.payment_contact_phone || p.public_phone} instructions={p.payment_instructions} onClose={() => setCheckoutOpen(false)} onOpenChat={(draft) => { setCheckoutOpen(false); setChatDraft(draft || ""); setChatOpen(true); }} onUnlocked={async () => { setCheckoutOpen(false); setNotice("Private gallery unlocked temporarily on this browser."); await load(); }}/>}
+
+    {shareOpen && <div className="modal-backdrop" onMouseDown={() => setShareOpen(false)}><section className="share-modal-v14" onMouseDown={e => e.stopPropagation()}><button className="modal-close" onClick={() => setShareOpen(false)}><X/></button><span className="section-kicker"><Share2 size={13}/> SHARE PROFILE</span><h2>Share {p.display_name}</h2><p>Send the profile directly or let someone scan the QR code.</p><div className="share-qr-v14"><img src={`https://quickchart.io/qr?text=${encodeURIComponent(profileUrl)}&size=220&margin=2&dark=2b1735&light=ffffff`} alt={`QR code for ${p.display_name}'s profile`}/><div><strong>@{p.username}</strong><span>{profileUrl}</span><button className="btn secondary" onClick={copyProfileLink}><Copy size={15}/> Copy profile link</button></div></div><div className="share-options-v14"><button onClick={nativeShareProfile}><Share2 size={16}/> Device share</button><a href={`sms:?body=${encodeURIComponent(`Take a look at ${p.display_name}'s Veloura profile: ${profileUrl}`)}`}><MessageSquareText size={16}/> Text</a><a href={`https://wa.me/?text=${encodeURIComponent(`Take a look at ${p.display_name}'s Veloura profile: ${profileUrl}`)}`} target="_blank" rel="noreferrer">WhatsApp</a><a href={`https://t.me/share/url?url=${encodeURIComponent(profileUrl)}&text=${encodeURIComponent(`Veloura profile: ${p.display_name}`)}`} target="_blank" rel="noreferrer">Telegram</a></div></section></div>}
+
+    <div className="mobile-quick-actions-v14">{p.public_phone && <a href={`tel:${p.public_phone.replace(/[^+\d]/g, "")}`} onClick={() => track("CONTACT_PHONE_CLICK")}><Phone size={18}/><span>Call</span></a>}{p.public_phone && <a href={`sms:${p.public_phone.replace(/[^+\d]/g, "")}`}><MessageSquareText size={18}/><span>Text</span></a>}<button onClick={() => { setChatDraft(""); setChatOpen(true); }}><MessageCircle size={18}/><span>Chat</span></button><button onClick={shareProfile}><Share2 size={18}/><span>Share</span></button></div>
 
     {selectedMedia && <div className="media-lightbox" onClick={() => setSelectedMedia(null)}><button className="modal-close lightbox-close"><X/></button><div className="lightbox-content" onClick={e => e.stopPropagation()}>{selectedMedia.type === "VIDEO" ? <video src={selectedMedia.media_url || undefined} controls autoPlay onEnded={() => track("VIDEO_COMPLETE", selectedMedia.id)}/> : <img src={selectedMedia.media_url || ""} alt={selectedMedia.title || "Media"}/>}<div className="lightbox-caption"><div><span>{selectedMedia.type}</span><strong>{selectedMedia.title}</strong><p>{selectedMedia.description}</p></div><button className={`tile-like big ${selectedMedia.liked_by_me ? "liked" : ""}`} onClick={() => toggleLike(selectedMedia)}><Heart size={18} fill={selectedMedia.liked_by_me ? "currentColor" : "none"}/>{selectedMedia.likes_count || 0}</button></div></div></div>}
   </main>;

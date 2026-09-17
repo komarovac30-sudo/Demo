@@ -8,7 +8,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ usernam
   const admin = serviceSupabase();
   const { data: profile } = await admin
     .from("profiles")
-    .select("id,username,display_name,bio,headline,avatar_url,cover_url,role,is_active,is_verified,public_phone,public_email,phone_visible,email_visible,exclusive_price,exclusive_currency,profile_likes_count,chat_force_sms_only")
+    .select("id,username,display_name,bio,headline,avatar_url,cover_url,role,is_active,is_verified,public_phone,public_email,phone_visible,email_visible,exclusive_price,exclusive_currency,profile_likes_count,chat_force_sms_only,age,height_label,body_type,ethnicity,hair_color,eye_color,measurements,cup_size,languages,tattoos_piercings")
     .eq("username", username)
     .eq("role", "CREATOR")
     .eq("is_active", true)
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ usernam
   const [{ data: media }, { data: reviews }, { data: paymentSettings }] = await Promise.all([
     admin.from("media").select("*").eq("creator_id", profile.id).order("sort_order").order("created_at", { ascending: true }),
     admin.from("reviews")
-      .select("id,reviewer_name,reviewer_first_name,reviewer_last_name,reviewer_avatar_url,rating,review_text,is_featured,created_at,source")
+      .select("id,reviewer_name,reviewer_first_name,reviewer_last_name,reviewer_avatar_url,rating,review_text,is_featured,created_at,source,verified_at")
       .eq("creator_id", profile.id)
       .eq("is_published", true)
       .order("is_featured", { ascending: false })
@@ -83,6 +83,16 @@ export async function GET(req: NextRequest, context: { params: Promise<{ usernam
       exclusive_price: Number(profile.exclusive_price || 0),
       exclusive_currency: profile.exclusive_currency || "USD",
       profile_likes_count: Number(profile.profile_likes_count || 0),
+      age: profile.age ?? null,
+      height_label: profile.height_label || null,
+      body_type: profile.body_type || null,
+      ethnicity: profile.ethnicity || null,
+      hair_color: profile.hair_color || null,
+      eye_color: profile.eye_color || null,
+      measurements: profile.measurements || null,
+      cup_size: profile.cup_size || null,
+      languages: profile.languages || null,
+      tattoos_piercings: profile.tattoos_piercings || null,
       btc_address: paymentSettings?.btc_address || null,
       payment_contact_phone: paymentSettings?.contact_phone || (profile.phone_visible ? profile.public_phone : null),
       payment_instructions: paymentSettings?.instructions || null,
