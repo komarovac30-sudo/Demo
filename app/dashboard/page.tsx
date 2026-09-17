@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import Link from "next/link";
 import {
   BadgeCheck, BarChart3, Check, ChevronRight, Copy, Eye, FileImage, Heart, ImagePlus, Images, LockKeyhole, LogOut, Mail,
-  Pencil, Phone, QrCode, RotateCcw, Save, ShieldCheck, Sparkles, Star, Trash2, Unlock, Upload, Users, X, MessageCircle
+  Pencil, Phone, QrCode, RotateCcw, Save, ShieldCheck, Sparkles, Star, Trash2, Unlock, Upload, Users, X, MessageCircle, LoaderCircle
 } from "lucide-react";
 import { supabase } from "@/lib/supabase-browser";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
@@ -93,8 +93,12 @@ export default function CreatorDashboard() {
       hair_color:String(form.get("hair_color")||"").trim()||null,eye_color:String(form.get("eye_color")||"").trim()||null,measurements:String(form.get("measurements")||"").trim()||null,cup_size:String(form.get("cup_size")||"").trim()||null,languages:String(form.get("languages")||"").trim()||null,tattoos_piercings:String(form.get("tattoos_piercings")||"").trim()||null,
       exclusive_price:Number(form.get("exclusive_price")||0),exclusive_currency:String(form.get("exclusive_currency")||"USD"),updated_at:new Date().toISOString(),
     };
-    const {error:updateError}=await supabase.from("profiles").update(payload).eq("id",profile.id);setBusy("");
-    if(updateError)flash(updateError.message,true);else{flash("Profile updated successfully.");await load();}
+    const {error:updateError}=await supabase.from("profiles").update(payload).eq("id",profile.id);
+    if(updateError){setBusy("");flash(updateError.message,true);return;}
+    setProfile(prev=>prev?{...prev,...payload}:prev);
+    flash("Profile saved successfully. Your public profile is up to date.");
+    await load();
+    setBusy("");
   }
 
   async function uploadProfileImage(file:File,kind:"avatar"|"cover"){
@@ -182,7 +186,7 @@ export default function CreatorDashboard() {
 
     <section className="dashboard-content-v5">
       <header id="home" className="workspace-header-v5"><div><span className="workspace-kicker"><Sparkles size={14}/> PRIVATE STUDIO</span><h1>Welcome back, {profile.display_name.split(" ")[0]}.</h1><p>Shape your profile, curate your galleries and keep an eye on the numbers that matter.</p></div><Link className="btn secondary" href={`/u/${profile.username}`}>View public profile <Eye size={17}/></Link></header>
-      {message&&<div className="alert success">{message}</div>}{error&&<div className="alert error">{error}</div>}
+      <div className="toast-stack-v16" aria-live="polite">{message&&<div className="alert success toast-v16">{message}</div>}{error&&<div className="alert error toast-v16">{error}</div>}</div>
 
       <section className="compact-metrics-v5">
         <article className="metric-v5 primary"><Users/><div><span>Total visitors</span><strong>{analytics?.totals.unique_visitors??0}</strong><small>{analytics?.totals.active_today??0} active in last 24h</small></div></article>
@@ -218,7 +222,7 @@ export default function CreatorDashboard() {
           <div className="two-fields"><label><span><Phone size={14}/> Direct contact</span><input name="public_phone" defaultValue={profile.public_phone||""} placeholder="+1 (305) 555-0148"/></label><label><span><Mail size={14}/> Private email</span><input name="public_email" type="email" defaultValue={profile.public_email||""} placeholder="hello@example.com"/></label></div>
           <div className="visibility-row-v5"><label className="toggle-row"><input name="phone_visible" type="checkbox" defaultChecked={profile.phone_visible}/><span/>Show direct contact publicly</label><label className="toggle-row"><input name="email_visible" type="checkbox" defaultChecked={profile.email_visible}/><span/>Show private email publicly</label></div>
           <div className="two-fields"><label>Private gallery access price<input name="exclusive_price" type="number" min="0" step="0.01" defaultValue={Number(profile.exclusive_price||0)}/></label><label>Currency<select name="exclusive_currency" defaultValue={profile.exclusive_currency||"USD"}><option>USD</option><option>EUR</option><option>GBP</option><option>CAD</option></select></label></div>
-          <div className="form-actions-v5"><button className="btn primary" disabled={busy==="save"}><Save size={17}/>{busy==="save"?"Saving…":"Save profile"}</button><Link className="btn ghost" href={`/u/${profile.username}`}>Preview public page</Link></div>
+          <div className="form-actions-v5"><button className="btn primary" disabled={busy==="save"}>{busy==="save"?<LoaderCircle className="spin-v16" size={17}/>:<Save size={17}/>}<span>{busy==="save"?"Saving & refreshing…":"Save profile"}</span></button><Link className="btn ghost" href={`/u/${profile.username}`}>Preview public page</Link></div>
         </form>
       </section>
 

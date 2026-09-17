@@ -264,7 +264,7 @@ export default function PublicProfilePage() {
           </div>
           <div className="profile-contact-actions">
             <button className="contact-action chat" onClick={() => { setChatDraft(""); setChatOpen(true); }}><MessageCircle size={17}/><span>Chat</span></button>
-            {p.public_phone && <a className="contact-action call" href={`tel:${p.public_phone.replace(/[^+\d]/g, "")}`} onClick={() => track("CONTACT_PHONE_CLICK")}><Phone size={17}/><span>Direct call</span></a>}
+            {p.public_phone && <a className="contact-action call" href={`sms:${p.public_phone.replace(/[^+\d]/g, "")}`} onClick={() => track("CONTACT_PHONE_CLICK")}><MessageSquareText size={17}/><span>Text phone</span></a>}
             {p.public_email && <a className="contact-action" href={`mailto:${p.public_email}`} onClick={() => track("CONTACT_EMAIL_CLICK")}><Mail size={17}/><span>Private email</span></a>}
             <button className="contact-action" onClick={shareProfile}><Share2 size={17}/><span>Share</span></button>
           </div>

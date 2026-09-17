@@ -1,0 +1,7 @@
+V16 changes
+
+• Desktop public profile: Direct Call changed to Text phone and now uses sms:.
+• Admin ES creation: API upserts and returns the new creator profile immediately; Admin inserts it optimistically, shows success toast, then silently reconciles with the server.
+• ES profile save: loading state remains active through refresh, profile updates optimistically, and success/error feedback is shown as a fixed toast.
+• Skeleton loading: changed to dark champagne/plum glass shimmer; QR/payment-setting skeletons matched to the same palette.
+• No database schema changes.

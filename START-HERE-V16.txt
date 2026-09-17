@@ -1,0 +1,12 @@
+VELOURA V16 — FEEDBACK & LOADING POLISH
+
+1. Extract this ZIP and replace the files in your Demo repository.
+2. Commit and push to main.
+3. No database migration is required for V16.
+4. Let Vercel deploy.
+
+CHECK AFTER DEPLOY
+- Public desktop profile phone action says “Text phone” and opens the device SMS handler.
+- Admin Create ES gives an immediate success toast and the new ES appears without manual refresh.
+- ES Save profile shows a visible saving state and a fixed success toast when complete.
+- Skeleton loaders use the champagne/gold glass shimmer instead of white.
