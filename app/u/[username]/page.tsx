@@ -10,6 +10,7 @@ import {
 import { supabase } from "@/lib/supabase-browser";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 import { PublicProfileSkeleton } from "@/components/Skeletons";
+import PrivateAccessModal from "@/components/PrivateAccessModal";
 
 type Media = {
   id: string; type: "PHOTO" | "VIDEO"; visibility: "PUBLIC" | "LOCKED"; title: string | null;
@@ -24,6 +25,7 @@ type Profile = {
   id: string; username: string; display_name: string; bio: string | null; headline: string | null;
   avatar_url: string | null; cover_url: string | null; is_verified: boolean; public_phone: string | null; public_email: string | null;
   exclusive_price: number; exclusive_currency: string; profile_likes_count?: number;
+  btc_address?: string | null; payment_contact_phone?: string | null; payment_instructions?: string | null; unlock_code_configured?: boolean;
 };
 type Payload = { profile: Profile; media: Media[]; reviews: Review[]; unlocked: boolean };
 type VisitorContext = { city: string | null; country: string | null; region: string | null };
@@ -60,7 +62,6 @@ export default function PublicProfilePage() {
   const [reviewBusy, setReviewBusy] = useState(false);
   const [reviewError, setReviewError] = useState("");
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [checkoutBusy, setCheckoutBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -107,12 +108,14 @@ export default function PublicProfilePage() {
 
   async function startGate(intent: GateIntent, mediaId?: string) {
     setAuthError("");
-    if (intent === "review") await track("REVIEW_STARTED"); else await track("UNLOCK_CLICK", mediaId);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.access_token) {
-      if (intent === "review") setReviewOpen(true); else setCheckoutOpen(true);
+    if (intent === "unlock") {
+      await track("UNLOCK_CLICK", mediaId);
+      setCheckoutOpen(true);
       return;
     }
+    await track("REVIEW_STARTED");
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) { setReviewOpen(true); return; }
     await track("AUTH_STARTED");
     setAuthMode("signin");
     setGateIntent(intent);
@@ -177,29 +180,6 @@ export default function PublicProfilePage() {
       setNotice("Review submitted. It will appear after admin approval.");
     } catch (err) { setReviewError(err instanceof Error ? err.message : "Unable to submit review."); }
     finally { setReviewBusy(false); }
-  }
-
-  async function completeDemoCheckout() {
-    if (!data) return;
-    setCheckoutBusy(true); setNotice("");
-    await track("PAYMENT_STARTED");
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error("Your session expired. Please try again.");
-      const res = await fetch("/api/exclusive/demo-unlock", {
-        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ creator_id: data.profile.id }),
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || "Unable to complete demo checkout.");
-      setCheckoutOpen(false);
-      setNotice("Private gallery unlocked for this demo account.");
-      await load();
-    } catch (err) {
-      await track("PAYMENT_FAILED");
-      setNotice(err instanceof Error ? err.message : "Unable to unlock content.");
-    }
-    finally { setCheckoutBusy(false); }
   }
 
   async function toggleLike(item: Media) {
@@ -267,6 +247,7 @@ export default function PublicProfilePage() {
           <span><Star size={16}/><b>{averageRating ? averageRating.toFixed(1) : "New"}</b><em>{data.reviews.length} reviews</em></span>
           <span className="trust-stat"><ShieldCheck size={16}/><b>Discreet</b><em>private profile</em></span>
         </div>
+        {visitorContext?.city && <div className="mobile-location-row-v9"><MapPin size={15}/><div><strong>{visitorContext.city}{visitorContext.country ? `, ${visitorContext.country}` : ""}</strong><span>Your approximate location</span></div><i className="mini-live-dot"/></div>}
       </section>
 
       {notice && <div className="profile-toast" onClick={() => setNotice("")}>{notice}<X size={14}/></div>}
@@ -324,7 +305,7 @@ export default function PublicProfilePage() {
 
     {reviewOpen && <div className="modal-backdrop" onMouseDown={() => setReviewOpen(false)}><section className="gate-modal review-modal" onMouseDown={e => e.stopPropagation()}><button className="modal-close" onClick={() => setReviewOpen(false)}><X/></button><span className="section-kicker">CLIENT REVIEW</span><h2>Share your experience</h2><p>Your review stays private until an Admin verifies it for publication.</p><form className="modal-form" onSubmit={submitReview}><div className="two-fields"><label>First name<input name="reviewer_first_name" required maxLength={60}/></label><label>Last name<input name="reviewer_last_name" required maxLength={60}/></label></div><label>Profile image <small>Optional</small><input name="reviewer_avatar" type="file" accept="image/*"/></label><label>Rating<select name="rating" defaultValue="5">{[5,4,3,2,1].map(n => <option value={n} key={n}>{"★".repeat(n)} {n} star{n > 1 ? "s" : ""}</option>)}</select></label><label>Review<textarea name="review_text" required minLength={10} maxLength={1200} rows={5} placeholder="Share a clear, respectful experience…"/></label>{reviewError && <div className="alert error">{reviewError}</div>}<button className="btn premium-cta wide" disabled={reviewBusy}>{reviewBusy ? "Submitting…" : "Submit for verification"}</button></form></section></div>}
 
-    {checkoutOpen && <div className="modal-backdrop" onMouseDown={() => setCheckoutOpen(false)}><section className="gate-modal checkout-modal" onMouseDown={e => e.stopPropagation()}><button className="modal-close" onClick={() => setCheckoutOpen(false)}><X/></button><div className="modal-icon"><Unlock/></div><span className="section-kicker">PRIVATE ACCESS</span><h2>Unlock the private gallery</h2><div className="checkout-price"><strong>{currency(p.exclusive_price, p.exclusive_currency)}</strong><span>one-time private-gallery access</span></div><div className="checkout-benefits"><span><BadgeCheck/> Full private gallery for @{p.username}</span><span><BadgeCheck/> Photos + videos currently marked private</span><span><BadgeCheck/> Creator-specific access only</span></div><div className="demo-warning"><ShieldCheck/><div><strong>No real payment is processed.</strong><span>This button simulates a confirmed digital-content purchase for the client demo. Connect an approved provider before production.</span></div></div><button className="btn premium-cta wide" disabled={checkoutBusy} onClick={completeDemoCheckout}>{checkoutBusy ? "Unlocking…" : `Unlock Private Gallery • ${currency(p.exclusive_price, p.exclusive_currency)}`}</button></section></div>}
+    {checkoutOpen && <PrivateAccessModal creatorId={p.id} displayName={p.display_name} priceLabel={currency(p.exclusive_price, p.exclusive_currency)} btcAddress={p.btc_address} contactPhone={p.payment_contact_phone || p.public_phone} instructions={p.payment_instructions} onClose={() => setCheckoutOpen(false)} onUnlocked={async () => { setCheckoutOpen(false); setNotice("Private gallery unlocked temporarily on this browser."); await load(); }}/>}
 
     {selectedMedia && <div className="media-lightbox" onClick={() => setSelectedMedia(null)}><button className="modal-close lightbox-close"><X/></button><div className="lightbox-content" onClick={e => e.stopPropagation()}>{selectedMedia.type === "VIDEO" ? <video src={selectedMedia.media_url || undefined} controls autoPlay onEnded={() => track("VIDEO_COMPLETE", selectedMedia.id)}/> : <img src={selectedMedia.media_url || ""} alt={selectedMedia.title || "Media"}/>}<div className="lightbox-caption"><div><span>{selectedMedia.type}</span><strong>{selectedMedia.title}</strong><p>{selectedMedia.description}</p></div><button className={`tile-like big ${selectedMedia.liked_by_me ? "liked" : ""}`} onClick={() => toggleLike(selectedMedia)}><Heart size={18} fill={selectedMedia.liked_by_me ? "currentColor" : "none"}/>{selectedMedia.likes_count || 0}</button></div></div></div>}
   </main>;

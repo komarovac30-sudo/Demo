@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { serviceSupabase } from "@/lib/supabase-service";
 import { makeVisitorKey, requestIp } from "@/lib/visitor-context";
+import { unlockCookieName, verifyUnlockToken } from "@/lib/unlock-session";
 
 export async function GET(req: NextRequest, context: { params: Promise<{ username: string }> }) {
   const { username } = await context.params;
@@ -27,12 +28,15 @@ export async function GET(req: NextRequest, context: { params: Promise<{ usernam
   }
 
   let unlocked = viewerId === profile.id || viewerRole === "SUPER_ADMIN";
+  if (!unlocked) {
+    unlocked = verifyUnlockToken(req.cookies.get(unlockCookieName(profile.id))?.value, profile.id);
+  }
   if (viewerId && !unlocked) {
     const { data: access } = await admin.from("profile_unlocks").select("id").eq("visitor_id", viewerId).eq("creator_id", profile.id).maybeSingle();
     unlocked = Boolean(access);
   }
 
-  const [{ data: media }, { data: reviews }] = await Promise.all([
+  const [{ data: media }, { data: reviews }, { data: paymentSettings }] = await Promise.all([
     admin.from("media").select("*").eq("creator_id", profile.id).order("sort_order").order("created_at", { ascending: true }),
     admin.from("reviews")
       .select("id,reviewer_name,reviewer_first_name,reviewer_last_name,reviewer_avatar_url,rating,review_text,is_featured,created_at,source")
@@ -40,6 +44,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ usernam
       .eq("is_published", true)
       .order("is_featured", { ascending: false })
       .order("created_at", { ascending: false }),
+    admin.from("creator_payment_settings").select("btc_address,contact_phone,instructions,unlock_code_updated_at").eq("creator_id", profile.id).maybeSingle(),
   ]);
 
   const userAgent = req.headers.get("user-agent") || "";
@@ -78,6 +83,10 @@ export async function GET(req: NextRequest, context: { params: Promise<{ usernam
       exclusive_price: Number(profile.exclusive_price || 0),
       exclusive_currency: profile.exclusive_currency || "USD",
       profile_likes_count: Number(profile.profile_likes_count || 0),
+      btc_address: paymentSettings?.btc_address || null,
+      payment_contact_phone: paymentSettings?.contact_phone || (profile.phone_visible ? profile.public_phone : null),
+      payment_instructions: paymentSettings?.instructions || null,
+      unlock_code_configured: Boolean(paymentSettings?.unlock_code_updated_at),
     },
     media: safeMedia,
     reviews: reviews || [],

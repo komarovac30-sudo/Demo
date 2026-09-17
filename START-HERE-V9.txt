@@ -1,0 +1,25 @@
+VELOURA V9 — PRIVATE ACCESS + AUTOMATED DATABASE MIGRATIONS
+
+WHAT CHANGED
+- Unlock no longer forces Visitor signup first.
+- Visitor chooses Bitcoin or Arrange Payment.
+- Bitcoin path shows the ES Bitcoin address and direct wallet link.
+- Both paths end at the ES contact + unlock-code screen.
+- Unlock codes are validated server-side; plaintext code is never stored in the database.
+- A successful code grants temporary private-gallery access to that browser for 1 hour.
+- ES manages BTC address, payment contact number, instructions and unlock code in Private Studio.
+- Mobile location alignment is fixed: location is now its own row under the numeric stats on narrow screens.
+- Existing skeleton loading remains enabled.
+- GitHub Actions can now automatically apply Supabase migrations after a push to main.
+
+ONE-TIME GITHUB SETUP
+Read DB-AUTOMATION-SETUP.md and add:
+- SUPABASE_ACCESS_TOKEN
+- SUPABASE_DB_PASSWORD
+- SUPABASE_PROJECT_REF
+
+Then future migrations in supabase/migrations are automatic.
+
+IMPORTANT
+No default unlock code is seeded. After V9 deploys, sign in as the ES and configure Private Studio → Payment & Private Access.
+Never put a Bitcoin seed phrase/private key in this website. Only enter a public receiving address.

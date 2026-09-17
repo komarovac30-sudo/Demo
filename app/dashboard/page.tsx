@@ -9,6 +9,7 @@ import {
 import { supabase } from "@/lib/supabase-browser";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 import { StudioSkeleton } from "@/components/Skeletons";
+import CreatorPaymentSettings from "@/components/CreatorPaymentSettings";
 
 type Profile = {
   id:string; username:string; display_name:string; bio:string|null; headline:string|null;
@@ -204,6 +205,8 @@ export default function CreatorDashboard() {
           <div className="form-actions-v5"><button className="btn primary" disabled={busy==="save"}><Save size={17}/>{busy==="save"?"Saving…":"Save profile"}</button><Link className="btn ghost" href={`/u/${profile.username}`}>Preview public page</Link></div>
         </form>
       </section>
+
+      <CreatorPaymentSettings fallbackPhone={profile.public_phone}/>
 
       <section id="post" className="workspace-panel-v5 post-panel-v5">
         <div className="panel-head-v5"><div><span className="workspace-kicker">ADD TO MY GALLERY</span><h2>Share something new.</h2><p>Choose a photo or video, preview it, then place it in your public gallery or private collection.</p></div><Upload/></div>

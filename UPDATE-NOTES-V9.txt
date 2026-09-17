@@ -1,0 +1,9 @@
+V9 scope:
+1. Bitcoin/manual payment selection for Private Gallery.
+2. Direct ES SMS/contact flow after payment.
+3. Per-creator server-hashed unlock code.
+4. Anonymous temporary access cookie (1 hour).
+5. Future-ready direction: convert temporary access to 30-day account entitlement after signup (not implemented in V9).
+6. Mobile location row alignment fix.
+7. Automated Supabase migration workflow for GitHub pushes.
+8. Demo seeds are intentionally NOT automated to protect real data.
