@@ -216,3 +216,7 @@ V12 keeps the free V11 temporary-chat model but improves its layout and handoff 
 A creator can choose **Web Chat** or **Force Text** from `/dashboard/messages`. Web Chat keeps temporary web messages and proof-photo uploads. Force Text turns the visitor composer into a mobile SMS handoff: the visitor's typed draft is kept locally, and pressing Send opens the device's native Messages app with the ES phone number and text prefilled. Browser security prevents a website from sending the SMS automatically, so the visitor still taps Send in the native app.
 
 V12 intentionally does **not** call the chat end-to-end encrypted. Traffic is protected by the site's HTTPS transport, while messages/proof photos continue to use the existing automatic 24-hour deletion model.
+
+## V13 chat refinement
+
+V13 moves Web Chat / Force Text to each individual visitor conversation, adds ES-side photo replies, removes the old security banner, and keeps the 24-hour temporary-chat retention model. See `START-HERE-V13.txt` and `QA-CHECKLIST-V13.md`.

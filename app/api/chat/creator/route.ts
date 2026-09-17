@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   const admin = serviceSupabase();
   await cleanupExpiredChatData(admin);
   const { data: threads, error } = await admin.from("chat_threads")
-    .select("id,guest_label,status,created_at,last_activity_at")
+    .select("id,guest_label,status,force_sms_only,created_at,last_activity_at")
     .eq("creator_id", creator.id)
     .order("last_activity_at", { ascending: false })
     .limit(80);
@@ -36,6 +36,6 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({
-    threads: (threads || []).map(t => ({ ...t, last_message: latest.get(t.id) || null })),
+    threads: (threads || []).map(t => ({ ...t, force_sms_only: Boolean(t.force_sms_only), last_message: latest.get(t.id) || null })),
   });
 }

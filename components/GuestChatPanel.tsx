@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { ImagePlus, MessageCircle, Phone, Send, ShieldCheck, Trash2, X } from "lucide-react";
+import { ImagePlus, MessageCircle, Phone, Send, Trash2, X } from "lucide-react";
 
 type ChatMessage = {
   id: number;
@@ -14,13 +14,17 @@ type ChatMessage = {
   attachment_mime?: string | null;
   attachment_size?: number | null;
 };
-type ChatPayload = { thread: { id: string; label: string; status: "ACTIVE" | "BLOCKED" }; messages: ChatMessage[]; retention_hours: number };
+type ChatPayload = {
+  thread: { id: string; label: string; status: "ACTIVE" | "BLOCKED"; force_sms_only?: boolean };
+  messages: ChatMessage[];
+  retention_hours: number;
+};
 
 type Props = {
   creatorId: string;
   displayName: string;
   phone?: string | null;
-  forceSmsOnly?: boolean;
+  forceSmsOnly?: boolean; // Legacy fallback; V13 uses the per-visitor thread setting from the API.
   open: boolean;
   onClose: () => void;
   initialMessage?: string;
@@ -69,7 +73,6 @@ export default function GuestChatPanel({ creatorId, displayName, phone, forceSms
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [handoffNotice, setHandoffNotice] = useState("");
-  const [showSecurityNotice, setShowSecurityNotice] = useState(false);
   const [draft, setDraft] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState("");
@@ -77,8 +80,8 @@ export default function GuestChatPanel({ creatorId, displayName, phone, forceSms
   const fileRef = useRef<HTMLInputElement>(null);
 
   const firstName = useMemo(() => displayName.split(" ")[0] || displayName, [displayName]);
-  const smsDraftKey = useMemo(() => `veloura_sms_draft_v12:${creatorId}`, [creatorId]);
-  const securityKey = useMemo(() => `veloura_chat_security_seen_v12:${creatorId}`, [creatorId]);
+  const smsDraftKey = useMemo(() => `veloura_sms_draft_v13:${creatorId}`, [creatorId]);
+  const effectiveForceSmsOnly = payload?.thread?.force_sms_only ?? forceSmsOnly;
   const smsHref = useMemo(() => {
     if (!phone) return "";
     const body = `Hi ${firstName}, I found your Veloura profile and would like to continue our conversation.`;
@@ -90,34 +93,21 @@ export default function GuestChatPanel({ creatorId, displayName, phone, forceSms
     setToken(ensureGuestToken());
     setError("");
     setHandoffNotice("");
-
-    const seen = window.localStorage.getItem(securityKey);
-    if (!seen) {
-      setShowSecurityNotice(true);
-      window.localStorage.setItem(securityKey, "1");
-    } else {
-      setShowSecurityNotice(false);
-    }
-
-    if (initialMessage) {
-      setDraft(initialMessage);
-      if (forceSmsOnly) window.localStorage.setItem(smsDraftKey, initialMessage);
-    } else if (forceSmsOnly) {
-      setDraft(window.localStorage.getItem(smsDraftKey) || "");
-    }
-  }, [open, initialMessage, forceSmsOnly, securityKey, smsDraftKey]);
+    if (initialMessage) setDraft(initialMessage);
+    else setDraft(window.localStorage.getItem(smsDraftKey) || "");
+  }, [open, initialMessage, smsDraftKey]);
 
   useEffect(() => {
     return () => { if (photoPreview) URL.revokeObjectURL(photoPreview); };
   }, [photoPreview]);
 
   useEffect(() => {
-    if (!forceSmsOnly) return;
+    if (!effectiveForceSmsOnly) return;
     if (photoPreview) URL.revokeObjectURL(photoPreview);
     setPhoto(null);
     setPhotoPreview("");
     if (fileRef.current) fileRef.current.value = "";
-  }, [forceSmsOnly]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [effectiveForceSmsOnly]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function refresh(silent = false) {
     if (!token || !open) return;
@@ -154,7 +144,7 @@ export default function GuestChatPanel({ creatorId, displayName, phone, forceSms
 
   function choosePhoto(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] || null;
-    if (!file || forceSmsOnly) return;
+    if (!file || effectiveForceSmsOnly) return;
     setError("");
     if (!ALLOWED_PHOTO_TYPES.has(file.type)) {
       setError("Use a JPG, PNG, or WebP image.");
@@ -173,7 +163,7 @@ export default function GuestChatPanel({ creatorId, displayName, phone, forceSms
 
   function updateDraft(value: string) {
     setDraft(value);
-    if (forceSmsOnly) window.localStorage.setItem(smsDraftKey, value);
+    window.localStorage.setItem(smsDraftKey, value);
   }
 
   async function handoffToSms(message: string) {
@@ -187,9 +177,9 @@ export default function GuestChatPanel({ creatorId, displayName, phone, forceSms
     if (!isMobileDevice()) {
       try {
         await navigator.clipboard.writeText(message);
-        setHandoffNotice(`Text-only mode is enabled. Your message was copied. Send it to ${phone} from your phone.`);
+        setHandoffNotice(`Text-only mode is enabled for this conversation. Your message was copied. Send it to ${phone} from your phone.`);
       } catch {
-        setHandoffNotice(`Text-only mode is enabled. Send this message to ${phone} from your phone.`);
+        setHandoffNotice(`Text-only mode is enabled for this conversation. Send this message to ${phone} from your phone.`);
       }
       return;
     }
@@ -201,7 +191,7 @@ export default function GuestChatPanel({ creatorId, displayName, phone, forceSms
     if (!token || payload?.thread.status === "BLOCKED") return;
     const message = draft.trim();
 
-    if (forceSmsOnly) {
+    if (effectiveForceSmsOnly) {
       if (!message) return;
       setError("");
       await handoffToSms(message);
@@ -226,8 +216,12 @@ export default function GuestChatPanel({ creatorId, displayName, phone, forceSms
         });
       }
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error || "Unable to send message.");
+      if (!res.ok) {
+        if (res.status === 409) await refresh(true);
+        throw new Error(body.error || "Unable to send message.");
+      }
       setDraft("");
+      window.localStorage.removeItem(smsDraftKey);
       clearPhoto();
       await refresh(true);
     } catch (err) { setError(err instanceof Error ? err.message : "Unable to send message."); }
@@ -236,18 +230,16 @@ export default function GuestChatPanel({ creatorId, displayName, phone, forceSms
 
   if (!open) return null;
   return <div className="chat-backdrop-v10" onMouseDown={onClose}>
-    <section className="guest-chat-v10 guest-chat-v11" onMouseDown={e => e.stopPropagation()} aria-label={`Chat with ${displayName}`}>
+    <section className="guest-chat-v10 guest-chat-v11 guest-chat-v13" onMouseDown={e => e.stopPropagation()} aria-label={`Chat with ${displayName}`}>
       <header className="guest-chat-head-v10">
         <div className="chat-avatar-v10"><MessageCircle size={19}/></div>
-        <div><strong>Chat with {firstName}</strong><span>Private Chat</span></div>
+        <div><strong>Chat with {firstName}</strong><span>Private &amp; Secure Chat. • Messages and photos expire after 24 hours.</span></div>
         <button onClick={onClose} aria-label="Close chat"><X size={18}/></button>
       </header>
 
-      {showSecurityNotice && <div className="chat-retention-note-v10 chat-security-once-v12"><ShieldCheck size={14}/><span><strong>Security is a priority.</strong> Chat traffic is protected in transit, and web messages plus payment-proof photos are automatically deleted after 24 hours.</span></div>}
-
       <div className="guest-chat-messages-v10" ref={listRef}>
         {loading && !payload ? <div className="chat-loading-v10"><i/><i/><i/></div> : null}
-        {!loading && payload && payload.messages.length === 0 ? <div className="chat-empty-v10"><MessageCircle/><strong>Start the conversation</strong><span>{forceSmsOnly ? "This profile currently prefers mobile text. Type your message below and Veloura will prepare it in your phone’s Messages app." : "Send a short private message or payment-proof photo, then continue by normal text whenever you prefer."}</span></div> : null}
+        {!loading && payload && payload.messages.length === 0 ? <div className="chat-empty-v10"><MessageCircle/><strong>Start the conversation</strong><span>{effectiveForceSmsOnly ? "This conversation is set to mobile text. Type your message below and Veloura will prepare it in your phone’s Messages app." : "Send a private message or payment-proof photo, then continue by normal text whenever you prefer."}</span></div> : null}
         {payload?.messages.map(item => <article key={item.id} className={`chat-bubble-v10 ${item.sender_type === "VISITOR" ? "mine" : "theirs"}`}>
           {item.attachment_url && <a className="chat-photo-v11" href={item.attachment_url} target="_blank" rel="noreferrer"><img src={item.attachment_url} alt={item.attachment_name || "Chat photo"}/></a>}
           {(item.message && !(item.attachment_url && item.message === "Photo")) && <p>{item.message}</p>}
@@ -256,18 +248,18 @@ export default function GuestChatPanel({ creatorId, displayName, phone, forceSms
       </div>
 
       {payload?.thread.status === "BLOCKED" ? <div className="chat-blocked-v10">This private chat is no longer available.</div> : <form className="chat-compose-wrap-v11" onSubmit={sendMessage}>
-        {!forceSmsOnly && photoPreview && <div className="chat-photo-preview-v11"><img src={photoPreview} alt="Selected payment proof"/><div><strong>{photo?.name}</strong><span>{photo ? `${(photo.size / 1024 / 1024).toFixed(1)} MB` : ""}</span></div><button type="button" onClick={clearPhoto} aria-label="Remove selected photo"><Trash2 size={15}/></button></div>}
-        <div className={`chat-compose-v10 chat-compose-v11 ${forceSmsOnly ? "sms-only-v12" : ""}`}>
-          {!forceSmsOnly && <><input ref={fileRef} className="chat-file-input-v11" type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto}/><button type="button" className="chat-photo-btn-v11" onClick={() => fileRef.current?.click()} aria-label="Add photo"><ImagePlus size={18}/></button></>}
-          <input value={draft} onChange={e => updateDraft(e.target.value)} maxLength={1000} autoComplete="off" placeholder={forceSmsOnly ? `Text ${firstName}…` : `Message ${firstName}…`} aria-label="Chat message"/>
-          <button className="chat-send-btn-v11" disabled={sending || (!draft.trim() && !photo)} aria-label={forceSmsOnly ? "Open message in phone" : "Send message"}>{forceSmsOnly ? <Phone size={17}/> : <Send size={17}/>}</button>
+        {!effectiveForceSmsOnly && photoPreview && <div className="chat-photo-preview-v11"><img src={photoPreview} alt="Selected payment proof"/><div><strong>{photo?.name}</strong><span>{photo ? `${(photo.size / 1024 / 1024).toFixed(1)} MB` : ""}</span></div><button type="button" onClick={clearPhoto} aria-label="Remove selected photo"><Trash2 size={15}/></button></div>}
+        <div className={`chat-compose-v10 chat-compose-v11 ${effectiveForceSmsOnly ? "sms-only-v12" : ""}`}>
+          {!effectiveForceSmsOnly && <><input ref={fileRef} className="chat-file-input-v11" type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto}/><button type="button" className="chat-photo-btn-v11" onClick={() => fileRef.current?.click()} aria-label="Add photo"><ImagePlus size={18}/></button></>}
+          <input value={draft} onChange={e => updateDraft(e.target.value)} maxLength={1000} autoComplete="off" placeholder={effectiveForceSmsOnly ? `Text ${firstName}…` : `Message ${firstName}…`} aria-label="Chat message"/>
+          <button className="chat-send-btn-v11" disabled={sending || (!draft.trim() && !photo)} aria-label={effectiveForceSmsOnly ? "Open message in phone" : "Send message"}>{effectiveForceSmsOnly ? <Phone size={17}/> : <Send size={17}/>}</button>
         </div>
-        <span className="chat-photo-help-v11">{forceSmsOnly ? "Text-only mode is enabled by this profile. Send opens your phone’s Messages app with your text ready; Veloura cannot send the SMS automatically." : "JPG, PNG or WebP • max 4 MB • useful for payment proof"}</span>
+        <span className="chat-photo-help-v11">{effectiveForceSmsOnly ? "Send opens your phone’s Messages app with your typed text ready. Veloura cannot send the SMS automatically." : "JPG, PNG or WebP • max 4 MB • useful for payment proof"}</span>
       </form>}
       {handoffNotice && <div className="chat-handoff-note-v12">{handoffNotice}</div>}
       {error && <div className="chat-error-v10">{error}</div>}
 
-      {!forceSmsOnly && smsHref && <a className="continue-sms-v10" href={smsHref}><Phone size={15}/><div><strong>Continue by Text</strong><span>Open your phone&apos;s Messages app and continue mobile-to-mobile.</span></div></a>}
+      {!effectiveForceSmsOnly && smsHref && <a className="continue-sms-v10" href={smsHref}><Phone size={15}/><div><strong>Continue by Text</strong><span>Open your phone&apos;s Messages app and continue mobile-to-mobile.</span></div></a>}
     </section>
   </div>;
 }

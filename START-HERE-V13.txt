@@ -1,0 +1,19 @@
+VELOURA V13 — PER-VISITOR PRIVATE CHAT
+
+WHAT CHANGED
+1. Removed the one-time security banner completely.
+2. Visitor chat header now reads:
+   Private & Secure Chat. • Messages and photos expire after 24 hours.
+3. ES can now send JPG/PNG/WebP photos (max 4 MB) from ES Studio → Messages.
+4. Web Chat / Force Text is now configured separately for each visitor conversation.
+5. The per-visitor mode control sits beside Block/Unblock in the selected conversation header.
+6. Guest chat automatically switches mode after the next poll (normally within ~8 seconds).
+
+DATABASE
+V13 adds chat_threads.force_sms_only.
+If GitHub/Supabase migration automation is configured, just push to main.
+Migration: supabase/migrations/20260917000500_v13_per_visitor_chat.sql
+Fallback: supabase/update-v13-per-visitor-chat.sql
+
+DEPLOY
+Extract this project over the current Demo repository, commit, push to main, check the GitHub migration Action, then verify the Vercel deployment.

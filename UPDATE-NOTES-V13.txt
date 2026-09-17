@@ -1,0 +1,10 @@
+VELOURA V13 UPDATE NOTES
+
+- Removed the temporary security banner from visitor and ES chat UI.
+- Chat subtitle is now: Private & Secure Chat. • Messages and photos expire after 24 hours.
+- Added creator-side photo sending with the same private 24-hour attachment lifecycle used for visitor payment-proof photos.
+- Creator photo upload accepts JPG, PNG and WebP up to 4 MB, supports preview/removal, text+photo or photo-only sends.
+- Changed Force Text from a creator-wide profile setting to a per-conversation setting.
+- Each selected visitor now has Web Chat / Force Text controls beside Block/Unblock.
+- Visitor APIs read the selected conversation's force_sms_only value; when Force Text is enabled, a visitor's Send action opens the native SMS composer instead of saving a new web message.
+- Existing V12 profiles.chat_force_sms_only is left in place only for backwards-compatible schema history; V13 public chat no longer uses it.
